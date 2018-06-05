@@ -45,5 +45,8 @@ try:
 except psycopg2.Error as e:
  pass
 
-print(cur.fetchall())
-
+#print(cur.fetchone())
+postgresql_version=cur.fetchone()
+print(postgresql_version[0])
+version=postgresql_version[0].split(' ')
+print(version[1])
