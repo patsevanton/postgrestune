@@ -2,6 +2,7 @@
 
 #apt install python3-psutil
 #apt install python3-pip
+#apt-get install python3-psycopg2
 
 #import psutil
 import platform
@@ -29,9 +30,20 @@ import psycopg2
 
 try:
     conn=psycopg2.connect(
- 	database="template1",
+ 	database="postgres",
   	user="postgres",
-  	host="/var/run/postgresql/",
+#  	host="localhost",
+#        unix='/var/run/postgresql/.s.PGSQL.5432',
   	)
 except:
     print("I am unable to connect to the database")
+
+cur = conn.cursor()
+
+try:
+ cur.execute("SELECT version();")
+except psycopg2.Error as e:
+ pass
+
+print(cur.fetchall())
+
