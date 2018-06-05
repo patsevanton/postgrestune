@@ -16,6 +16,7 @@ import platform
 import re
 import subprocess
 import psycopg2
+from packaging import version
 
 # mem = psutil.virtual_memory()
 # print( 'OS total memory     : {0} MB'.format(round(mem.total / 1024**2, 0)))
@@ -52,4 +53,8 @@ except psycopg2.Error as e:
 
 postgresql_version=cur.fetchone()[0].split(' ')[1]
 print(postgresql_version)
-# version=postgresql_version[0].split(' ')
+
+if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
+	then print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+
+#version.parse("1.3.a4") < version.parse("10.1.2")
