@@ -3,6 +3,7 @@
 #apt install python3-psutil
 #apt install python3-pip
 #apt-get install python3-psycopg2
+#apt-get install python3-packaging
 
 POSTGRESQL_VERSION_MAJOR_LATEST='10.4'
 POSTGRESQL_VERSION_MINOR_LATEST_10='10.4'
