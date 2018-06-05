@@ -4,6 +4,13 @@
 #apt install python3-pip
 #apt-get install python3-psycopg2
 
+POSTGRESQL_VERSION_MAJOR_LATEST='10.4'
+POSTGRESQL_VERSION_MINOR_LATEST_10='10.4'
+POSTGRESQL_VERSION_MINOR_LATEST_96='9.6.9'
+POSTGRESQL_VERSION_MINOR_LATEST_95='9.5.13'
+POSTGRESQL_VERSION_MINOR_LATEST_94='9.4.18'
+POSTGRESQL_VERSION_MINOR_LATEST_93='9.3.23'
+
 #import psutil
 import platform
 import re
@@ -29,14 +36,12 @@ import psycopg2
 
 
 try:
-    conn=psycopg2.connect(
- 	database="postgres",
-  	user="postgres",
-#  	host="localhost",
-#        unix='/var/run/postgresql/.s.PGSQL.5432',
-  	)
+  conn=psycopg2.connect(
+    database="postgres",
+    user="postgres",
+  )
 except:
-    print("I am unable to connect to the database")
+  print("I am unable to connect to the database")
 
 cur = conn.cursor()
 
@@ -45,8 +50,6 @@ try:
 except psycopg2.Error as e:
  pass
 
-#print(cur.fetchone())
-postgresql_version=cur.fetchone()
-print(postgresql_version[0])
-version=postgresql_version[0].split(' ')
-print(version[1])
+postgresql_version=cur.fetchone()[0].split(' ')
+print(postgresql_version)
+# version=postgresql_version[0].split(' ')
