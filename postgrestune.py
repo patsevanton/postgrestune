@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-#apt install python3-psutil
-#apt install python3-pip
-#apt-get install python3-psycopg2
-#apt-get install python3-packaging
+# apt install python3-psutil
+# apt install python3-pip
+# apt-get install python3-psycopg2
+# apt-get install python3-packaging
 
 POSTGRESQL_VERSION_MAJOR_LATEST='10.4'
 POSTGRESQL_VERSION_MINOR_LATEST_10='10.4'
@@ -58,4 +58,7 @@ print(postgresql_version)
 if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
 	print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
 
-#version.parse("1.3.a4") < version.parse("10.1.2")
+print(dir(version))
+print()
+print()
+print(dir(packaging))
