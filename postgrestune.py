@@ -55,6 +55,6 @@ postgresql_version=cur.fetchone()[0].split(' ')[1]
 print(postgresql_version)
 
 if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
-	then print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+	print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
 
 #version.parse("1.3.a4") < version.parse("10.1.2")
