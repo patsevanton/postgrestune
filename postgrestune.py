@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
+#apt install python3-psutil
+#apt install python3-pip
 
 import psutil
 import platform
