@@ -5,7 +5,7 @@
 # apt-get install python3-psycopg2
 # apt-get install python3-packaging
 
-POSTGRESQL_VERSION_MAJOR_LATEST='10.4'
+POSTGRESQL_VERSION_MAJOR_LATEST='10'
 POSTGRESQL_VERSION_MINOR_LATEST_10='10.4'
 POSTGRESQL_VERSION_MINOR_LATEST_96='9.6.9'
 POSTGRESQL_VERSION_MINOR_LATEST_95='9.5.13'
@@ -53,12 +53,24 @@ except psycopg2.Error as e:
  pass
 
 postgresql_version=cur.fetchone()[0].split(' ')[1]
+POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_version)[0]
 print(postgresql_version)
 
-if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
-	print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
-
-print(dir(version))
-print()
-print()
-print(dir(packaging))
+if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
+  print("You used not major postgres latest version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+  print("You used postgres major version: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
+  if POSTGRESQL_VERSION_MAJOR_CURRENT == '9.6':
+    if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_96):
+      print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+  elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.5':
+    if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_95):
+      print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+  elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.4':
+    if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_94):
+      print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+  elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.3':
+    if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_93):
+      print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+else:
+  if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
+    print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
