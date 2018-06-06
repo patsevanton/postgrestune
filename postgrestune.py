@@ -58,8 +58,16 @@ def get_int_proc(path_of_proc):
         logging.error("Error {0}".format(e))
         sys.exit(3)
 
-overcommit_memory = get_int_proc(/proc/sys/vm/overcommit_memory)
-print("overcommit_memory: {0}".format(overcommit_memory))
+overcommit_memory = get_int_proc('/proc/sys/vm/overcommit_memory')
+if overcommit_memory != 2:
+  print("overcommit_memory: {0}".format(overcommit_memory))
+  print("""Memory overcommitment is allowed on the system. 
+    This can lead to OOM Killer killing some PostgreSQL process,
+    which will cause a PostgreSQL server restart (crash recovery)""")
+  logging.error("I am unable to connect to the database")
+  print("""set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. 
+    This will disable memory overcommitment and avoid postgresql killed by OOM killer.""")
+
 
 try:
   conn=psycopg2.connect(
