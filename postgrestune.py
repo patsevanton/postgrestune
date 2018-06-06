@@ -18,6 +18,7 @@ import re
 import subprocess
 import psycopg2
 from packaging import version
+import logging
 
 # mem = psutil.virtual_memory()
 # print( 'OS total memory     : {0} MB'.format(round(mem.total / 1024**2, 0)))
@@ -74,3 +75,7 @@ if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VE
 else:
   if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
     print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
+
+logging.debug("This is a debug message")
+logging.info("Informational message")
+logging.error("An error has happened!")
