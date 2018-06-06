@@ -90,9 +90,9 @@ try:
 except psycopg2.Error as e:
  logging.error("I am unable run query select usename from pg_shadow where passwd='md5'||md5(usename||usename)")
 
-if cur > 0:
+if cur != None:
   for k in cur:
-    logging.error("some users account have the username as password : {0}".format(k[0])
+    logging.error("some users account have the username as password : {0}".format(k[0]))
 
 cur.close()
 conn.close()
