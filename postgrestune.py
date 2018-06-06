@@ -20,8 +20,10 @@ import psycopg2
 from packaging import version
 import logging
 import coloredlogs
+from procfs import Proc
 
 coloredlogs.install()
+proc = Proc()
 
 logging.basicConfig(level=logging.INFO)
 
@@ -37,11 +39,20 @@ logging.basicConfig(level=logging.INFO)
 # print( 'linux_distribution  : {0}'.format(platform.linux_distribution()))
 
 
-# test_variable = subprocess.check_output('dmesg',shell=True)
-# result = re.findall(r'vmware|kvm|xen|vbox|hyper-v', test_variable)
-# print(result)
+test_variable = subprocess.check_output('dmesg',shell=True)
+result = re.findall(r'vmware|kvm|xen|vbox|hyper-v', test_variable.decode('utf-8'))
+print(result)
 
 
+if vm.overcommit_memory != 100:
+  logging.info("Informational message")
+if vm.overcommit_ratio !=2 :
+  logging.info("""On Linux 2.6 and later, it is possible to modify the kernel's behavior so that it will not “overcommit” memory.
+  Although this setting will not prevent the OOM killer from being invoked altogether, 
+  it will lower the chances significantly and will therefore lead to more robust system behavior. 
+  This is done by selecting strict overcommit mode via sysctl:
+  sysctl -w vm.overcommit_memory=2
+  """)
 
 try:
   conn=psycopg2.connect(
