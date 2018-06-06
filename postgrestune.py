@@ -4,6 +4,8 @@
 # apt install python3-pip
 # apt-get install python3-psycopg2
 # apt-get install python3-packaging
+# pip3 install procfs
+# pip3 install coloredlogs
 
 POSTGRESQL_VERSION_MAJOR_LATEST='10'
 POSTGRESQL_VERSION_MINOR_LATEST_10='10.4'
@@ -46,6 +48,7 @@ print(result)
 
 if vm.overcommit_memory != 100:
   logging.info("Informational message")
+
 if vm.overcommit_ratio !=2 :
   logging.info("""On Linux 2.6 and later, it is possible to modify the kernel's behavior so that it will not “overcommit” memory.
   Although this setting will not prevent the OOM killer from being invoked altogether, 
