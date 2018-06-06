@@ -23,9 +23,7 @@ import coloredlogs
 
 coloredlogs.install()
 
-logging.basicConfig(filename="sample.log", level=logging.INFO)
-
-
+logging.basicConfig(level=logging.INFO)
 
 # mem = psutil.virtual_memory()
 # print( 'OS total memory     : {0} MB'.format(round(mem.total / 1024**2, 0)))
@@ -58,7 +56,7 @@ cur = conn.cursor()
 try:
  cur.execute("SELECT version();")
 except psycopg2.Error as e:
- pass
+ logging.error("I am unable run query SELECT version();")
 
 postgresql_version=cur.fetchone()[0].split(' ')[1]
 POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_version)[0]
@@ -86,3 +84,16 @@ else:
 logging.debug("This is a debug message")
 logging.info("Informational message")
 logging.error("An error has happened!")
+
+cur = None
+
+try:
+ cur.execute("select usename from pg_shadow where passwd='md5'||md5(usename||usename);")
+except psycopg2.Error as e:
+ logging.error("I am unable run query select usename from pg_shadow where passwd='md5'||md5(usename||usename)")
+
+print(cur.fetchone())
+print(cur.fetchall())
+
+cur.close()
+conn.close()
