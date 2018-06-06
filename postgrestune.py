@@ -19,8 +19,13 @@ import subprocess
 import psycopg2
 from packaging import version
 import logging
+import coloredlogs
+
+coloredlogs.install()
 
 logging.basicConfig(filename="sample.log", level=logging.INFO)
+
+
 
 # mem = psutil.virtual_memory()
 # print( 'OS total memory     : {0} MB'.format(round(mem.total / 1024**2, 0)))
