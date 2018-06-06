@@ -22,10 +22,12 @@ import psycopg2
 from packaging import version
 import logging
 import coloredlogs
+import os
 
 coloredlogs.install()
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format = '%(levelname)-8s %(message)s', level = logging.DEBUG)
+logging.getLogger("postgrestune")
 
 # mem = psutil.virtual_memory()
 # print( 'OS total memory     : {0} MB'.format(round(mem.total / 1024**2, 0)))
@@ -39,43 +41,58 @@ logging.basicConfig(level=logging.INFO)
 # print( 'linux_distribution  : {0}'.format(platform.linux_distribution()))
 
 
-test_variable = subprocess.check_output('dmesg',shell=True)
-result = re.findall(r'vmware|kvm|xen|vbox|hyper-v', test_variable.decode('utf-8'))
-print(result)
+
+proc_sys_block = [os.listdir('/sys/block')][0]
+exclude_sys_block = ('loop', 'sr0')
+used_sys_block = [x for x in proc_sys_block if not x.startswith(exclude_sys_block)]
+print('used_sys_block', used_sys_block)
+
+dmesg_output = subprocess.check_output('dmesg',shell=True)
+hypervisor = set(re.findall(r'vmware|kvm|xen|vbox|hyper-v', dmesg_output.decode('utf-8')))
+if len(hypervisor) > 1:
+  logging.error("hypervisor in dmesg more 1")
+elif len(hypervisor) == 1:
+  print("Check scheduler")
+else:
+  print("Running on physical machine")
 
 
 def get_int_proc(path_of_proc):
     try:
-        with open(path_of_proc, 'r') as procfile:
-            cputimes = procfile.readline()
-            cputotal = 0
-            for i in cputimes.split(' ')[2:]:
-                i = int(i)
-                cputotal = (cputotal + i)
-            return(int(cputotal))
+      with open(path_of_proc, 'r') as f:
+        int_proc = int(f.readline().split()[0])
+        return(int_proc)
     except IOError as e:
         print('ERROR: %s' % e)
         logging.error("Error {0}".format(e))
-        sys.exit(3)
 
 overcommit_memory = get_int_proc('/proc/sys/vm/overcommit_memory')
 if overcommit_memory != 2:
-  print("overcommit_memory: {0}".format(overcommit_memory))
-  print("""Memory overcommitment is allowed on the system. 
+  logging.info("overcommit_memory: {0}".format(overcommit_memory))
+  logging.info("""Memory overcommitment is allowed on the system. 
     This can lead to OOM Killer killing some PostgreSQL process,
     which will cause a PostgreSQL server restart (crash recovery)""")
-  logging.error("I am unable to connect to the database")
-  print("""set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. 
+  logging.info("""set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. 
     This will disable memory overcommitment and avoid postgresql killed by OOM killer.""")
 
+overcommit_ratio = get_int_proc('/proc/sys/vm/overcommit_ratio')
+if overcommit_ratio <= 50:
+  logging.info("overcommit_ratio: {0}".format(overcommit_ratio))
+  logging.info("""vm.overcommit_ratio is too small, 
+    you will not be able to use more than $overcommit_ratio*RAM+SWAP for applications""")
+elif overcommit_ratio >= 90:
+  logging.info("overcommit_ratio: {0}".format(overcommit_ratio))
+  logging.info("vm.overcommit_ratio is too high, you need to keep free space for the kernel")
 
 try:
   conn=psycopg2.connect(
     database="postgres",
     user="postgres",
   )
-except:
-  logging.error("I am unable to connect to the database")
+except IOError as e:
+  print('ERROR: %s' % e)
+  logging.error("Error {0}".format(e))
+  # logging.error("I am unable to connect to the database")
 
 cur = conn.cursor()
 
@@ -107,9 +124,9 @@ else:
   if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
     logging.error("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
 
-logging.debug("This is a debug message")
-logging.info("Informational message")
-logging.error("An error has happened!")
+# logging.debug("This is a debug message")
+# logging.info("Informational message")
+# logging.error("An error has happened!")
 
 try:
  cur.execute("select usename from pg_shadow where passwd='md5'||md5(usename||usename);")
