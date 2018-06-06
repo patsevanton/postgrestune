@@ -51,7 +51,7 @@ try:
     user="postgres",
   )
 except:
-  print("I am unable to connect to the database")
+  logging.error("I am unable to connect to the database")
 
 cur = conn.cursor()
 
@@ -65,23 +65,23 @@ POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_
 print(postgresql_version)
 
 if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
-  print("You used not major postgres latest version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
-  print("You used postgres major version: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
+  logging.info("You used not major postgres latest version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+  logging.info("You used postgres major version: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
   if POSTGRESQL_VERSION_MAJOR_CURRENT == '9.6':
     if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_96):
-      print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+      logging.error("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.5':
     if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_95):
-      print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+      logging.error("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.4':
     if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_94):
-      print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+      logging.error("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.3':
     if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_93):
-      print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+      logging.error("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
 else:
   if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
-    print("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
+    logging.error("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
 
 logging.debug("This is a debug message")
 logging.info("Informational message")
