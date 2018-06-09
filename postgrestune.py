@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 ### Install requirements: ###
 # apt install python-psutil or yum install python2-psutil
@@ -90,20 +91,20 @@ def check_postgresql_version():
   POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_version)[0]
 
   if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
-    print(Fore.YELLOW + "WARN: You used not major postgres latest version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
-    print(Fore.YELLOW + "INFO: You used postgres major version: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
+    print(Fore.YELLOW + "WARN: Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+    print(Fore.YELLOW + "INFO: You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if POSTGRESQL_VERSION_MAJOR_CURRENT == '9.6':
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_96):
-        print(Fore.RED + "WARN: You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print(Fore.RED + "WARN: You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.5':
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_95):
-        print(Fore.RED + "WARN: You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print(Fore.RED + "WARN: You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.4':
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_94):
-        print(Fore.RED + "WARN: You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print(Fore.RED + "WARN: You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.3':
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_93):
-        print(Fore.RED + "WARN: You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print(Fore.RED + "WARN: You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   else:
     if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
       print(Fore.RED + "WARN: You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
@@ -201,29 +202,43 @@ def work_mem():
 
 def convert_to_byte(size):
   size_byte=None
-  # print(size)
-  if 'GB|Gb|gb' in size:
-    # print(size)
-    size_mb = int(re.sub(r'gb', '', size, re.IGNORECASE))*1024
+  if re.search('gb', size, re.IGNORECASE):
+    size_mb = int(re.sub(r'gb', '', size, flags=re.IGNORECASE))*1024
     size_kb = size_mb*1024
     size_byte = size_kb*1024
-  elif 'MB|Mb|mb' in size:
-    # print(size)
-    size_kb = int(re.sub(r'mb', '', size, re.IGNORECASE))*1024
+  elif re.search('mb', size, re.IGNORECASE):
+    size_kb = int(re.sub(r'mb', '', size, flags=re.IGNORECASE))*1024
     size_byte = size_kb*1024
   elif re.search('kb', size, re.IGNORECASE):
     size_byte = int(re.sub(r'kb', '', size, flags=re.IGNORECASE))*1024
   return size_byte
 
-# print(work_mem())
-print(convert_to_byte(work_mem()))
+def format_bytes(bytes_num):
+    sizes = [ "B", "KB", "MB", "GB", "TB" ]
+ 
+    i = 0
+    dblbyte = bytes_num
+ 
+    while (i < len(sizes) and  bytes_num >= 1024):
+            dblbyte = bytes_num / 1024.0
+            i = i + 1
+            bytes_num = bytes_num / 1024
+ 
+    return str(round(dblbyte, 2)) + " " + sizes[i]
 
-# work_mem_int=int(re.sub(r'MB|kB', '', work_mem()))
-# work_mem_total=work_mem_int*WORK_MEM_PER_CONNECTION_PERCENT/100*max_connections();
-# print(Fore.GREEN + "INFO: configured work_mem {0}".format(work_mem()))
-# print(Fore.GREEN + "INFO: Using an average ratio of work_mem buffers by connection of {0}".format(WORK_MEM_PER_CONNECTION_PERCENT))
-# print(Fore.GREEN + "INFO: total work_mem (per connection): {}".format(work_mem()*WORK_MEM_PER_CONNECTION_PERCENT/100))
+work_mem_total=convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100*max_connections();
+print(Fore.GREEN + "INFO: configured work_mem {0}".format(work_mem()))
+print(Fore.GREEN + "INFO: Using an average ratio of work_mem buffers by connection of {0}".format(WORK_MEM_PER_CONNECTION_PERCENT))
+print(Fore.GREEN + "INFO: total work_mem (per connection): {}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
 
+def shared_buffers():
+  try:
+   cur.execute("show shared_buffers;")
+  except psycopg2.Error as e:
+   print(Fore.RED + "Error {0}".format(e))
+  return cur.fetchone()[0]
+
+print(Fore.GREEN + "INFO: shared_buffers: {}".format(shared_buffers()));
 
 def autovacuum_max_workers():
   return int(cur_execute("show autovacuum_max_workers;"))
@@ -236,8 +251,7 @@ max_processes = max_connections() + autovacuum_max_workers()
 if POSTGRESQL_VERSION_MAJOR_CURRENT >= '9.4':
   max_processes = max_processes + max_worker_processes()
 
-
-print(Fore.RED + "max_processes = " + str(max_processes))
+print(Fore.GREEN + "Track activity reserved size : " + str(max_processes))
 
 def track_activity_query_size():
   return int(cur_execute("show track_activity_query_size;"))
@@ -249,23 +263,29 @@ def maintenance_work_mem():
    cur.execute("show maintenance_work_mem;")
   except psycopg2.Error as e:
    print(Fore.RED + "Error {0}".format(e))
-  return int(re.sub(r'MB', '', cur.fetchone()[0]))
+  return cur.fetchone()[0]
 
-maintenance_work_mem_total = maintenance_work_mem()*autovacuum_max_workers();
+maintenance_work_mem_total = convert_to_byte(maintenance_work_mem()) * autovacuum_max_workers()
 
-if maintenance_work_mem() <= 64*1024*1024:
-  print(Fore.YELLOW + "WARN: maintenance_work_mem {}MB is less or equal default value. Increase it to reduce maintenance tasks time".format(maintenance_work_mem()))
+if convert_to_byte(maintenance_work_mem()) <= 64*1024*1024:
+  print(Fore.YELLOW + "WARN: maintenance_work_mem {} is less or equal default value. Increase it to reduce maintenance tasks time".format(maintenance_work_mem()))
 else:
-  print(Fore.GREEN + "INFO: maintenance_work_mem = {}".format(maintenance_work_mem))
+  print(Fore.GREEN + "INFO: maintenance_work_mem = {}".format(maintenance_work_mem()))
 
-def shared_buffers():
-  try:
-   cur.execute("show shared_buffers;")
-  except psycopg2.Error as e:
-   print(Fore.RED + "Error {0}".format(e))
-  return int(re.sub(r'MB|GB', '', cur.fetchone()[0]))
+max_memory=convert_to_byte(shared_buffers())+work_mem_total+maintenance_work_mem_total+track_activity_size
 
-print(Fore.GREEN + "INFO: shared_buffers: {}".format(shared_buffers()));
+temp_variable1 = max_connections()*convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100
+temp_variable2 = format_bytes(autovacuum_max_workers() * convert_to_byte(maintenance_work_mem()))
+
+print(Fore.WHITE + "\t\t Max memory usage:")
+print(Fore.WHITE + "\t\t shared_buffers ({})".format(shared_buffers()))
+print(Fore.WHITE + "\t\t + max_connections * work_mem * average_work_mem_buffers_per_connection ", end='')
+print(Fore.WHITE + "({0}*{1}*{2}/100 = {3})".format(max_connections(),
+  format_bytes(convert_to_byte(work_mem())),WORK_MEM_PER_CONNECTION_PERCENT,format_bytes(temp_variable1)))
+print(Fore.WHITE + "\t\t + autovacuum_max_workers * maintenance_work_mem ", end='')
+print(Fore.WHITE + "({0}*{1} = {2})".format(autovacuum_max_workers(),maintenance_work_mem(),temp_variable2))
+print(Fore.WHITE + "\t\t + track activity size ", end='')
+print(Fore.WHITE + "({0})".format(format_bytes(track_activity_size)))
 
 print(Fore.RESET)
 
