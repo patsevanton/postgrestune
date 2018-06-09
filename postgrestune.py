@@ -29,10 +29,36 @@ import os
 import datetime
 from colorama import Fore
 
+def convert_to_byte(size):
+  size_byte=None
+  if re.search('gb', size, re.IGNORECASE):
+    size_mb = int(re.sub(r'gb', '', size, flags=re.IGNORECASE))*1024
+    size_kb = size_mb*1024
+    size_byte = size_kb*1024
+  elif re.search('mb', size, re.IGNORECASE):
+    size_kb = int(re.sub(r'mb', '', size, flags=re.IGNORECASE))*1024
+    size_byte = size_kb*1024
+  elif re.search('kb', size, re.IGNORECASE):
+    size_byte = int(re.sub(r'kb', '', size, flags=re.IGNORECASE))*1024
+  return size_byte
+
+def format_bytes(bytes_num):
+    sizes = [ "B", "KB", "MB", "GB", "TB" ]
+ 
+    i = 0
+    dblbyte = bytes_num
+ 
+    while (i < len(sizes) and  bytes_num >= 1024):
+            dblbyte = bytes_num / 1024.0
+            i = i + 1
+            bytes_num = bytes_num / 1024
+ 
+    return str(round(dblbyte, 2)) + " " + sizes[i]
+
 mem = psutil.virtual_memory()
 
 print(Fore.WHITE   + "=====  OS information  =====")
-print(Fore.GREEN + 'INFO: OS total memory     : {0} MB'.format(round(mem.total / 1024**2, 0)))
+print(Fore.GREEN + 'INFO: OS total memory     : {0}'.format(format_bytes(mem.total)))
 print(Fore.BLUE  + 'INFO: node                : {0}'.format(platform.node()))
 print(Fore.GREEN + 'INFO: release             : {0}'.format(platform.release()))
 print(Fore.BLUE  + 'INFO: machine             : {0}'.format(platform.machine()))
@@ -200,32 +226,6 @@ def work_mem():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-def convert_to_byte(size):
-  size_byte=None
-  if re.search('gb', size, re.IGNORECASE):
-    size_mb = int(re.sub(r'gb', '', size, flags=re.IGNORECASE))*1024
-    size_kb = size_mb*1024
-    size_byte = size_kb*1024
-  elif re.search('mb', size, re.IGNORECASE):
-    size_kb = int(re.sub(r'mb', '', size, flags=re.IGNORECASE))*1024
-    size_byte = size_kb*1024
-  elif re.search('kb', size, re.IGNORECASE):
-    size_byte = int(re.sub(r'kb', '', size, flags=re.IGNORECASE))*1024
-  return size_byte
-
-def format_bytes(bytes_num):
-    sizes = [ "B", "KB", "MB", "GB", "TB" ]
- 
-    i = 0
-    dblbyte = bytes_num
- 
-    while (i < len(sizes) and  bytes_num >= 1024):
-            dblbyte = bytes_num / 1024.0
-            i = i + 1
-            bytes_num = bytes_num / 1024
- 
-    return str(round(dblbyte, 2)) + " " + sizes[i]
-
 work_mem_total=convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100*max_connections();
 print(Fore.GREEN + "INFO: configured work_mem {0}".format(work_mem()))
 print(Fore.GREEN + "INFO: Using an average ratio of work_mem buffers by connection of {0}".format(WORK_MEM_PER_CONNECTION_PERCENT))
@@ -286,6 +286,67 @@ print(Fore.WHITE + "\t\t + autovacuum_max_workers * maintenance_work_mem ", end=
 print(Fore.WHITE + "({0}*{1} = {2})".format(autovacuum_max_workers(),maintenance_work_mem(),temp_variable2))
 print(Fore.WHITE + "\t\t + track activity size ", end='')
 print(Fore.WHITE + "({0})".format(format_bytes(track_activity_size)))
+
+def effective_cache_size():
+  try:
+   cur.execute("show effective_cache_size;")
+  except psycopg2.Error as e:
+   print(Fore.RED + "Error {0}".format(e))
+  return cur.fetchone()[0]
+
+print(Fore.GREEN + "INFO: effective_cache_size: {}".format(effective_cache_size()));
+
+def all_databases_size():
+  try:
+   cur.execute("select sum(pg_database_size(datname)) from pg_database;")
+  except psycopg2.Error as e:
+   print(Fore.RED + "Error {0}".format(e))
+  return cur.fetchone()[0]
+
+print(Fore.GREEN + "INFO: Size of all databases : {}".format(format_bytes(int(all_databases_size()))))
+
+shared_buffers_usage = int(all_databases_size())/convert_to_byte(shared_buffers())
+if shared_buffers_usage < 0.7:
+  print("shared_buffer is too big for the total databases size, memory is lost")
+
+percent_postgresql_max_memory = max_memory*100./mem.total
+print(Fore.BLUE + "PostgreSQL maximum memory usage: {0:.2f}%".format(percent_postgresql_max_memory) + " of system RAM")
+
+if percent_postgresql_max_memory > 100:
+  print(Fore.RED + "BAD: Max possible memory usage for PostgreSQL is more than system total RAM. Add more RAM or reduce PostgreSQL memory")
+elif percent_postgresql_max_memory > 80:
+  print(Fore.YELLOW + "WARN: Max possible memory usage for PostgreSQL is more than 90% of system total RAM.")
+elif percent_postgresql_max_memory < 60:
+  print(Fore.YELLOW + "WARN: Max possible memory usage for PostgreSQL is less than 60% of system total RAM. On a dedicated host you can increase PostgreSQL buffers to optimize performances.")
+else:
+  print(Fore.GREEN + "INFO: Max possible memory usage for PostgreSQL is good")
+
+track_activity_ratio = track_activity_size*100/mem.total
+if track_activity_ratio > 1:
+  print(Fore.YELLOW + "Track activity reserved size is more than 1% of your RAM")
+  print(Fore.YELLOW + "track_activity","low","Your track activity reserved size is too high. Reduce track_activity_query_size and/or max_connections")
+
+percent_mem_usage=(max_memory + convert_to_byte(effective_cache_size()))*100/mem.total
+print(Fore.BLUE + "max memory+effective_cache_size is {0:.2f}%".format(percent_mem_usage) + " of total RAM")
+
+if percent_mem_usage < 60 and shared_buffers_usage > 1:
+  print(Fore.YELLOW + "Increase shared_buffers and/or effective_cache_size to use more memory")
+elif percent_mem_usage > 90:
+  print(Fore.YELLOW + "the sum of max_memory and effective_cache_size is too high, the planer can find bad plans if system cache is smaller than expected")  
+
+def log_min_duration_statement():
+  try:
+   cur.execute("show log_min_duration_statement;")
+  except psycopg2.Error as e:
+   print(Fore.RED + "Error {0}".format(e))
+  return cur.fetchone()[0]
+
+if log_min_duration_statement() == '-1':
+  print(Fore.RED + "BAD: log of long queries is desactivated. It will be more difficult to optimize query performances")
+elif log_min_duration_statement < 1000:
+  print(Fore.RED + "BAD: log_min_duration_statement=" + log_min_duration_statement() + ": all requests of more than 1 sec will be written in log. It can be disk intensive (I/O and space)")
+else:
+  print(Fore.GREEN + "long queries will be logged")
 
 print(Fore.RESET)
 
