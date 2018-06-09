@@ -2,11 +2,11 @@
 from __future__ import print_function
 
 ### Install requirements: ###
-# apt install python-psutil or yum install python2-psutil
-# apt install python-pip or yum install python2-pip
+# apt-get install python-psutil or yum install python2-psutil
+# apt-get install python-pip or yum install python2-pip
 # apt-get install python-psycopg2 or yum install python-psycopg2
 # apt-get install python-packaging or yum install python-packaging
-# yum install python-colorama
+# apt-get install python-colorama or yum install python-colorama
 
 ### PostgreSQL major and minor verion: ###
 POSTGRESQL_VERSION_MAJOR_CURRENT=None
@@ -43,16 +43,13 @@ def convert_to_byte(size):
   return size_byte
 
 def format_bytes(bytes_num):
-    sizes = [ "B", "KB", "MB", "GB", "TB" ]
- 
+    sizes = [ "B", "KB", "MB", "GB", "TB" ] 
     i = 0
     dblbyte = bytes_num
- 
     while (i < len(sizes) and  bytes_num >= 1024):
             dblbyte = bytes_num / 1024.0
             i = i + 1
             bytes_num = bytes_num / 1024
- 
     return str(round(dblbyte, 2)) + " " + sizes[i]
 
 mem = psutil.virtual_memory()
@@ -79,8 +76,7 @@ def cur_execute(sql_query):
    cur.execute(sql_query)
   except psycopg2.Error as e:
    print("Error {0}".format(e))
-
-  return cur.fetchone()[0]
+  return cur.fetchone()
 
 def get_value_proc(path_of_proc):
     try:
@@ -113,7 +109,7 @@ check_overcommit_ratio()
 print(Fore.WHITE + "=====  General instance informations  =====")
 
 def check_postgresql_version():
-  postgresql_version=cur_execute("SELECT version();").split(' ')[1]
+  postgresql_version=cur_execute("SELECT version();")[0].split(' ')[1]
   POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_version)[0]
 
   if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
@@ -165,12 +161,12 @@ check_pg_stat_statements()
 print(Fore.WHITE + "-----  Connection information  -----")
 
 def max_connections():
-  return int(cur_execute("SELECT setting FROM pg_settings WHERE name = 'max_connections';"))
+  return int(cur_execute("SELECT setting FROM pg_settings WHERE name = 'max_connections';")[0])
 
 print(Fore.BLUE + "INFO: max_connections: {}".format(max_connections()))
 
 def current_connections():
-  return int(cur_execute("SELECT count(*) FROM pg_stat_activity;"))
+  return int(cur_execute("SELECT count(*) FROM pg_stat_activity;")[0])
 
 current_connections_percent=current_connections()*100/max_connections()
 
@@ -185,7 +181,7 @@ def check_current_connections_percent():
 check_current_connections_percent()
 
 def superuser_reserved_connections():
-  return int(cur_execute("show superuser_reserved_connections;"))
+  return int(cur_execute("show superuser_reserved_connections;")[0])
 
 def superuser_reserved_connections_ratio():
   superuser_reserved_connections_ratio=superuser_reserved_connections()*100/max_connections()
@@ -199,7 +195,7 @@ def superuser_reserved_connections_ratio():
 superuser_reserved_connections_ratio()
 
 def average_connection_age():
-  return int(cur_execute("select extract(epoch from avg(now()-backend_start)) as age from pg_stat_activity;"))
+  return int(cur_execute("select extract(epoch from avg(now()-backend_start)) as age from pg_stat_activity;")[0])
 
 def convert_time(sec): 
     td = datetime.timedelta(seconds=sec) 
@@ -241,10 +237,10 @@ def shared_buffers():
 print(Fore.GREEN + "INFO: shared_buffers: {}".format(shared_buffers()));
 
 def autovacuum_max_workers():
-  return int(cur_execute("show autovacuum_max_workers;"))
+  return int(cur_execute("show autovacuum_max_workers;")[0])
 
 def max_worker_processes():
-  return int(cur_execute("show max_worker_processes;"))
+  return int(cur_execute("show max_worker_processes;")[0])
 
 max_processes = max_connections() + autovacuum_max_workers()
 
@@ -254,7 +250,7 @@ if POSTGRESQL_VERSION_MAJOR_CURRENT >= '9.4':
 print(Fore.GREEN + "Track activity reserved size : " + str(max_processes))
 
 def track_activity_query_size():
-  return int(cur_execute("show track_activity_query_size;"))
+  return int(cur_execute("show track_activity_query_size;")[0])
 
 track_activity_size = track_activity_query_size()*max_processes
 
