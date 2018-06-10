@@ -67,8 +67,11 @@ def format_bytes(bytes_num):
 
 mem = psutil.virtual_memory()
 
+# Report
+# OS version
 print(Fore.WHITE   + "=====  OS information  =====")
 print(Fore.GREEN + '[INFO]\t linux_distribution  : {0}'.format(platform.linux_distribution()))
+# OS Memory
 print(Fore.GREEN + '[INFO]\t OS total memory     : {0}'.format(format_bytes(mem.total)))
 print(Fore.BLUE  + '[INFO]\t node                : {0}'.format(platform.node()))
 print(Fore.GREEN + '[INFO]\t release             : {0}'.format(platform.release()))
@@ -99,6 +102,7 @@ def get_value_proc(path_of_proc):
     except IOError as e:
       print(Fore.RED + '[ERROR]\t %s' % e)
 
+# Overcommit
 def check_overcommit_memory():
   overcommit_memory = int(get_value_proc('/proc/sys/vm/overcommit_memory'))
   if overcommit_memory != 2:
@@ -121,6 +125,7 @@ check_overcommit_ratio()
 
 print(Fore.WHITE + "=====  General instance informations  =====")
 
+## Version
 print('-----  Version  -----')
 def check_postgresql_version():
   postgresql_version=cur_execute("SELECT version();")[0].split(' ')[1]
@@ -149,6 +154,7 @@ def check_postgresql_version():
 
 POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
 
+## Uptime
 print('-----  Uptime  -----')
 
 def get_pid_postgresql(dir_pid = '/var/run/postgresql'):
@@ -164,10 +170,26 @@ def get_time_running_pid(pid):
 
 pid_postgresql = get_pid_postgresql()
 timestamp_running_postgresql = get_time_running_pid(pid_postgresql)
-print(Fore.GREEN + '[INFO]\t Service uptime: ' + time.strftime("%Hh %Mm %Ss", time.gmtime(timestamp_running_postgresql)))
+print(Fore.GREEN + '[INFO]\t PoatgreSQL service uptime: ' + time.strftime("%Hh %Mm %Ss", time.gmtime(timestamp_running_postgresql)))
 
 if timestamp_running_postgresql < 24*60*60:
-    print(Fore.YELLOW + "[WARN]\t Uptime is less than 1 day. $script_name result may not be accurate")
+    print(Fore.YELLOW + "[WARN]\t Uptime is less than 1 day. " + __file__ + " result may not be accurate")
+
+# ## Database count (except template)
+print('-----  Databases  -----')
+
+def database_count():
+  try:
+   cur.execute("SELECT datname FROM pg_database WHERE NOT datistemplate AND datallowconn;")
+  except psycopg2.Error as e:
+   print(Fore.RED + "Error {0}".format(e))
+  list_databases = [i[0] for i in cur.fetchall()]
+  print(Fore.GREEN + '[INFO]\t Database count (except templates): {}'.format(len(list_databases)))
+  print(Fore.GREEN + '[INFO]\t Database list (except templates): {}'.format(list_databases))
+  
+database_count()
+
+print('-----  Users  -----')
 
 def check_username_equal_password():
   try:
@@ -176,8 +198,11 @@ def check_username_equal_password():
    print(Fore.RED + "Error {0}".format(e))
 
   if cur != None:
-    for k in cur:
-      print(Fore.RED + "[ERROR]\t some users account have the username as password : {0}".format(k[0]))
+    users_account = [i[0] for i in cur.fetchall()]
+    print(Fore.RED + '[ERROR]\t some users account have the username as password :  {}'.format(users_account))
+    # for k in cur:
+    #   print(Fore.RED + "[ERROR]\t some users account have the username as password : {0}".format(k[0]))
+
 
 check_username_equal_password()
 
