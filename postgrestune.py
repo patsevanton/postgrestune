@@ -40,6 +40,7 @@ from packaging import version
 import os
 import datetime
 from colorama import Fore
+import time
 
 def convert_to_byte(size):
   size_byte=None
@@ -120,6 +121,7 @@ check_overcommit_ratio()
 
 print(Fore.WHITE + "=====  General instance informations  =====")
 
+print('-----  Version  -----')
 def check_postgresql_version():
   postgresql_version=cur_execute("SELECT version();")[0].split(' ')[1]
   POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_version)[0]
@@ -140,11 +142,32 @@ def check_postgresql_version():
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_93):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   else:
+    print(Fore.GREEN + "[OK]\t You are using last postgresql version {}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
       print(Fore.RED + "[WARN]\t You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
   return POSTGRESQL_VERSION_MAJOR_CURRENT
 
 POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
+
+print('-----  Uptime  -----')
+
+def get_pid_postgresql(dir_pid = '/var/run/postgresql'):
+  for file in os.listdir(dir_pid):
+    if file.endswith(".pid"):
+      file_pid = os.path.join(dir_pid, file)
+      with open(file_pid) as f:
+        return int(next(f))
+
+def get_time_running_pid(pid):            
+  p = psutil.Process(pid)
+  return time.time() - p.create_time()
+
+pid_postgresql = get_pid_postgresql()
+timestamp_running_postgresql = get_time_running_pid(pid_postgresql)
+print(Fore.GREEN + '[INFO]\t Service uptime: ' + time.strftime("%Hh %Mm %Ss", time.gmtime(timestamp_running_postgresql)))
+
+if timestamp_running_postgresql < 24*60*60:
+    print(Fore.YELLOW + "[WARN]\t Uptime is less than 1 day. $script_name result may not be accurate")
 
 def check_username_equal_password():
   try:
