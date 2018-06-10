@@ -52,10 +52,19 @@ def add_advice(category, priority, advice):
 def print_advices():
   for category,priority_advice in advices.iteritems():
     print(Fore.WHITE + '-----  {}  -----'.format(category))
-    # print(category,priority_advice)
     for priority,advice in priority_advice.iteritems():
-      if priority == 'medium':
-        print(Fore.YELLOW + priority,advice)
+      if priority == 'urgent':
+        print(Fore.RED + priority,advice, end='')
+      elif priority == 'medium':
+        print(Fore.YELLOW + priority,advice, end='')
+      elif priority == 'low':
+        print(Fore.GREEN + priority,advice, end='')
+    print(Fore.RESET, end='')
+  print(Fore.RESET, end='')  
+
+def print_header_2(string):
+  print(Fore.WHITE + '===== ' + string + ' =====', end='')
+  print(Fore.RESET)
 
 def print_report_bad(string):
   print(Fore.RED + "[BAD]:\t{}".format(string))
@@ -480,7 +489,7 @@ else:
   print(Fore.RED + "[BAD]:\t autovacuum is not activated. This is bad except if you known what you do.")
 
 ## Checkpoint
-print(Fore.WHITE + '-----  Checkpoint  -----')
+print_header_2("Checkpoint")
 checkpoint_completion_target=float(get_setting('checkpoint_completion_target'))
 if checkpoint_completion_target < 0.5:
   print_report_bad("checkpoint_completion_target({}) is lower than default (0.5)".format(checkpoint_completion_target))
