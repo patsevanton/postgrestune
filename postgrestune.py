@@ -18,6 +18,18 @@ POSTGRESQL_VERSION_MINOR_LATEST_94='9.4.18'
 POSTGRESQL_VERSION_MINOR_LATEST_93='9.3.23'
 WORK_MEM_PER_CONNECTION_PERCENT=150
 
+import imp
+def find_module(*modules):
+  for module in modules:
+    try:
+        imp.find_module(module)
+    except ImportError:
+        print('Not found {0} module.'.format(module))
+        print('Run command sudo apt-get install python-{0} or sudo yum install python2-{0}'.format(module))
+        exit(1)
+
+find_module('psutil', 'psycopg2', 'packaging', 'colorama')
+
 #### Import modules: ####
 import psutil
 import platform
