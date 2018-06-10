@@ -178,16 +178,16 @@ if timestamp_running_postgresql < 24*60*60:
 # ## Database count (except template)
 print('-----  Databases  -----')
 
-def database_count():
+def select_database():
   try:
    cur.execute("SELECT datname FROM pg_database WHERE NOT datistemplate AND datallowconn;")
   except psycopg2.Error as e:
    print(Fore.RED + "Error {0}".format(e))
   list_databases = [i[0] for i in cur.fetchall()]
   print(Fore.GREEN + '[INFO]\t Database count (except templates): {}'.format(len(list_databases)))
-  print(Fore.GREEN + '[INFO]\t Database list (except templates): {}'.format(list_databases))
+  print(Fore.GREEN + '[INFO]\t Database list (except templates): ' + ', '.join(str(p) for p in list_databases))
   
-database_count()
+select_database()
 
 print('-----  Users  -----')
 
@@ -196,17 +196,26 @@ def check_username_equal_password():
    cur.execute("select usename from pg_shadow where passwd='md5'||md5(usename||usename);")
   except psycopg2.Error as e:
    print(Fore.RED + "Error {0}".format(e))
-
   if cur != None:
     users_account = [i[0] for i in cur.fetchall()]
-    print(Fore.RED + '[ERROR]\t some users account have the username as password :  {}'.format(users_account))
-    # for k in cur:
-    #   print(Fore.RED + "[ERROR]\t some users account have the username as password : {0}".format(k[0]))
-
+    print(Fore.RED + '[ERROR]\t some users account have the username as password : ' + ', '.join(str(p) for p in users_account))
+  else:
+    print(Fore.GREEN + '[INFO]\t No user with password=username')
 
 check_username_equal_password()
 
 print(Fore.WHITE + "-----  Extensions  -----")
+
+def select_extensions():
+  try:
+   cur.execute("select extname from pg_extension")
+  except psycopg2.Error as e:
+   print(Fore.RED + "Error {0}".format(e))
+  list_extensions = [i[0] for i in cur.fetchall()]
+  print(Fore.GREEN + '[INFO]\t Number of activated extensions : {}'.format(len(list_extensions)))
+  print(Fore.GREEN + '[INFO]\t Activated extensions : {}'.format(list_extensions))
+  
+select_extensions()
 
 def check_pg_stat_statements():
   available_pg_stat_statements=cur_execute("SELECT * FROM pg_available_extensions WHERE name = 'pg_stat_statements' and installed_version is not null;")
