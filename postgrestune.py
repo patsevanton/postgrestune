@@ -67,12 +67,12 @@ def format_bytes(bytes_num):
 mem = psutil.virtual_memory()
 
 print(Fore.WHITE   + "=====  OS information  =====")
-print(Fore.GREEN + 'INFO: OS total memory     : {0}'.format(format_bytes(mem.total)))
-print(Fore.BLUE  + 'INFO: node                : {0}'.format(platform.node()))
-print(Fore.GREEN + 'INFO: release             : {0}'.format(platform.release()))
-print(Fore.BLUE  + 'INFO: machine             : {0}'.format(platform.machine()))
-print(Fore.BLUE  + 'INFO: processor           : {0}'.format(platform.processor()))
-print(Fore.GREEN + 'INFO: linux_distribution  : {0}'.format(platform.linux_distribution()))
+print(Fore.GREEN + '[INFO]\t linux_distribution  : {0}'.format(platform.linux_distribution()))
+print(Fore.GREEN + '[INFO]\t OS total memory     : {0}'.format(format_bytes(mem.total)))
+print(Fore.BLUE  + '[INFO]\t node                : {0}'.format(platform.node()))
+print(Fore.GREEN + '[INFO]\t release             : {0}'.format(platform.release()))
+print(Fore.BLUE  + '[INFO]\t machine             : {0}'.format(platform.machine()))
+print(Fore.BLUE  + '[INFO]\t processor           : {0}'.format(platform.processor()))
 
 try:
   conn=psycopg2.connect(
@@ -96,25 +96,25 @@ def get_value_proc(path_of_proc):
         value_proc = f.readline().split()[0]
         return(value_proc)
     except IOError as e:
-      print(Fore.RED + 'ERROR: %s' % e)
+      print(Fore.RED + '[ERROR]\t %s' % e)
 
 def check_overcommit_memory():
   overcommit_memory = int(get_value_proc('/proc/sys/vm/overcommit_memory'))
   if overcommit_memory != 2:
-    print(Fore.YELLOW + "WARN: overcommit_memory: {0}".format(overcommit_memory))
-    print(Fore.YELLOW + "WARN: Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
-    print(Fore.YELLOW + "WARN: set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. This will disable memory overcommitment and avoid postgresql killed by OOM killer.")
+    print(Fore.YELLOW + "[WARN]\t overcommit_memory: {0}".format(overcommit_memory))
+    print(Fore.YELLOW + "[WARN]\t Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
+    print(Fore.YELLOW + "[WARN]\t set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. This will disable memory overcommitment and avoid postgresql killed by OOM killer.")
 
 check_overcommit_memory()
 
 def check_overcommit_ratio():
   overcommit_ratio = int(get_value_proc('/proc/sys/vm/overcommit_ratio'))
   if overcommit_ratio <= 50:
-    print(Fore.YELLOW + "WARN: overcommit_ratio: {0}".format(overcommit_ratio))
-    print(Fore.YELLOW + "WARN: vm.overcommit_ratio is too small, you will not be able to use more than $overcommit_ratio*RAM+SWAP for applications")
+    print(Fore.YELLOW + "[WARN]\t overcommit_ratio: {0}".format(overcommit_ratio))
+    print(Fore.YELLOW + "[WARN]\t vm.overcommit_ratio is too small, you will not be able to use more than $overcommit_ratio*RAM+SWAP for applications")
   elif overcommit_ratio >= 90:
-    print(Fore.YELLOW + "WARN: overcommit_ratio: {0}".format(overcommit_ratio))
-    print(Fore.YELLOW + "WARN: vm.overcommit_ratio is too high, you need to keep free space for the kernel")
+    print(Fore.YELLOW + "[WARN]\t overcommit_ratio: {0}".format(overcommit_ratio))
+    print(Fore.YELLOW + "[WARN]\t vm.overcommit_ratio is too high, you need to keep free space for the kernel")
 
 check_overcommit_ratio()
 
@@ -125,23 +125,23 @@ def check_postgresql_version():
   POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_version)[0]
 
   if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
-    print(Fore.YELLOW + "WARN: Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
-    print(Fore.YELLOW + "INFO: You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
+    print(Fore.YELLOW + "[WARN]\t Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+    print(Fore.YELLOW + "[INFO]\t You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if POSTGRESQL_VERSION_MAJOR_CURRENT == '9.6':
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_96):
-        print(Fore.RED + "WARN: You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.5':
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_95):
-        print(Fore.RED + "WARN: You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.4':
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_94):
-        print(Fore.RED + "WARN: You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.3':
       if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_93):
-        print(Fore.RED + "WARN: You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   else:
     if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
-      print(Fore.RED + "WARN: You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
+      print(Fore.RED + "[WARN]\t You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
   return POSTGRESQL_VERSION_MAJOR_CURRENT
 
 POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
@@ -154,7 +154,7 @@ def check_username_equal_password():
 
   if cur != None:
     for k in cur:
-      print(Fore.RED + "ERROR: some users account have the username as password : {0}".format(k[0]))
+      print(Fore.RED + "[ERROR]\t some users account have the username as password : {0}".format(k[0]))
 
 check_username_equal_password()
 
@@ -163,10 +163,10 @@ print(Fore.WHITE + "-----  Extensions  -----")
 def check_pg_stat_statements():
   available_pg_stat_statements=cur_execute("SELECT * FROM pg_available_extensions WHERE name = 'pg_stat_statements' and installed_version is not null;")
   if available_pg_stat_statements == None:
-    print(Fore.RED + "ERROR: Extensions pg_stat_statements is disabled")
-    print(Fore.YELLOW + "WARN: Enable pg_stat_statements to collect statistics on all queries (not only queries longer than log_min_duration_statement in logs)")
-    print(Fore.YELLOW + "WARN: Add the following entries to your postgres.conf: shared_preload_libraries = 'pg_stat_statements'")
-    print(Fore.YELLOW + "WARN: restart the PostgreSQL daemon and run 'create extension pg_stat_statements' on your database")
+    print(Fore.RED + "[ERROR]\t Extensions pg_stat_statements is disabled")
+    print(Fore.YELLOW + "[WARN]\t Enable pg_stat_statements to collect statistics on all queries (not only queries longer than log_min_duration_statement in logs)")
+    print(Fore.YELLOW + "[WARN]\t Add the following entries to your postgres.conf: shared_preload_libraries = 'pg_stat_statements'")
+    print(Fore.YELLOW + "[WARN]\t restart the PostgreSQL daemon and run 'create extension pg_stat_statements' on your database")
 
 check_pg_stat_statements()
 
@@ -175,20 +175,20 @@ print(Fore.WHITE + "-----  Connection information  -----")
 def max_connections():
   return int(cur_execute("SELECT setting FROM pg_settings WHERE name = 'max_connections';")[0])
 
-print(Fore.BLUE + "INFO: max_connections: {}".format(max_connections()))
+print(Fore.BLUE + "[INFO]\t max_connections: {}".format(max_connections()))
 
 def current_connections():
   return int(cur_execute("SELECT count(*) FROM pg_stat_activity;")[0])
 
 current_connections_percent=current_connections()*100/max_connections()
 
-print(Fore.BLUE + "INFO: current used connections: {} ({}%)".format(current_connections(),current_connections_percent))
+print(Fore.BLUE + "[INFO]\t current used connections: {} ({}%)".format(current_connections(),current_connections_percent))
 
 def check_current_connections_percent():
   if current_connections_percent > 90:
-    print(Fore.RED + 'ERROR: You are using more that 90% or your connection. Increase max_connections before saturation of connection slots')
+    print(Fore.RED + '[ERROR]\t You are using more that 90% or your connection. Increase max_connections before saturation of connection slots')
   elif current_connections_percent > 70:
-    print(Fore.YELLOW + 'WARN: You are using more than 70% or your connection. Increase max_connections before saturation of connection slots')    
+    print(Fore.YELLOW + '[WARN]\t You are using more than 70% or your connection. Increase max_connections before saturation of connection slots')    
 
 check_current_connections_percent()
 
@@ -217,11 +217,11 @@ average_connection_seconds=average_connection_age()
 
 def check_average_connection_age(seconds):
   h,m,s = convert_time(average_connection_age())
-  print(Fore.GREEN + 'INFO: Average connection age : {:2.0f}h {:2.0f}m {:2.0f}s'.format(h,m,s))
+  print(Fore.GREEN + '[INFO]\t Average connection age : {:2.0f}h {:2.0f}m {:2.0f}s'.format(h,m,s))
   if seconds < 60:
-    print(Fore.RED + "WARN: Average connection age is less than 1 minute. Use a connection pooler to limit new connection/seconds")
+    print(Fore.RED + "[WARN]\t Average connection age is less than 1 minute. Use a connection pooler to limit new connection/seconds")
   elif seconds < 600:
-    print(Fore.YELLOW + "WARN: Average connection age is less than 10 minutes. Use a connection pooler to limit new connection/seconds")
+    print(Fore.YELLOW + "[WARN]\t Average connection age is less than 10 minutes. Use a connection pooler to limit new connection/seconds")
 
 check_average_connection_age(average_connection_seconds)
 
@@ -235,9 +235,9 @@ def work_mem():
   return cur.fetchone()[0]
 
 work_mem_total=convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100*max_connections();
-print(Fore.GREEN + "INFO: configured work_mem {0}".format(work_mem()))
-print(Fore.GREEN + "INFO: Using an average ratio of work_mem buffers by connection of {0}".format(WORK_MEM_PER_CONNECTION_PERCENT))
-print(Fore.GREEN + "INFO: total work_mem (per connection): {}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
+print(Fore.GREEN + "[INFO]\t configured work_mem {0}".format(work_mem()))
+print(Fore.GREEN + "[INFO]\t Using an average ratio of work_mem buffers by connection of {0}".format(WORK_MEM_PER_CONNECTION_PERCENT))
+print(Fore.GREEN + "[INFO]\t total work_mem (per connection): {}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
 
 def shared_buffers():
   try:
@@ -246,7 +246,7 @@ def shared_buffers():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "INFO: shared_buffers: {}".format(shared_buffers()));
+print(Fore.GREEN + "[INFO]\t shared_buffers: {}".format(shared_buffers()));
 
 def autovacuum_max_workers():
   return int(cur_execute("show autovacuum_max_workers;")[0])
@@ -276,9 +276,9 @@ def maintenance_work_mem():
 maintenance_work_mem_total = convert_to_byte(maintenance_work_mem()) * autovacuum_max_workers()
 
 if convert_to_byte(maintenance_work_mem()) <= 64*1024*1024:
-  print(Fore.YELLOW + "WARN: maintenance_work_mem {} is less or equal default value. Increase it to reduce maintenance tasks time".format(maintenance_work_mem()))
+  print(Fore.YELLOW + "[WARN]\t maintenance_work_mem {} is less or equal default value. Increase it to reduce maintenance tasks time".format(maintenance_work_mem()))
 else:
-  print(Fore.GREEN + "INFO: maintenance_work_mem = {}".format(maintenance_work_mem()))
+  print(Fore.GREEN + "[INFO]\t maintenance_work_mem = {}".format(maintenance_work_mem()))
 
 max_memory=convert_to_byte(shared_buffers())+work_mem_total+maintenance_work_mem_total+track_activity_size
 
@@ -302,7 +302,7 @@ def effective_cache_size():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "INFO: effective_cache_size: {}".format(effective_cache_size()));
+print(Fore.GREEN + "[INFO]\t effective_cache_size: {}".format(effective_cache_size()));
 
 def all_databases_size():
   try:
@@ -311,7 +311,7 @@ def all_databases_size():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "INFO: Size of all databases : {}".format(format_bytes(int(all_databases_size()))))
+print(Fore.GREEN + "[INFO]\t Size of all databases : {}".format(format_bytes(int(all_databases_size()))))
 
 shared_buffers_usage = int(all_databases_size())/convert_to_byte(shared_buffers())
 if shared_buffers_usage < 0.7:
@@ -323,11 +323,11 @@ print(Fore.BLUE + "PostgreSQL maximum memory usage: {0:.2f}%".format(percent_pos
 if percent_postgresql_max_memory > 100:
   print(Fore.RED + "BAD: Max possible memory usage for PostgreSQL is more than system total RAM. Add more RAM or reduce PostgreSQL memory")
 elif percent_postgresql_max_memory > 80:
-  print(Fore.YELLOW + "WARN: Max possible memory usage for PostgreSQL is more than 90% of system total RAM.")
+  print(Fore.YELLOW + "[WARN]\t Max possible memory usage for PostgreSQL is more than 90% of system total RAM.")
 elif percent_postgresql_max_memory < 60:
-  print(Fore.YELLOW + "WARN: Max possible memory usage for PostgreSQL is less than 60% of system total RAM. On a dedicated host you can increase PostgreSQL buffers to optimize performances.")
+  print(Fore.YELLOW + "[WARN]\t Max possible memory usage for PostgreSQL is less than 60% of system total RAM. On a dedicated host you can increase PostgreSQL buffers to optimize performances.")
 else:
-  print(Fore.GREEN + "INFO: Max possible memory usage for PostgreSQL is good")
+  print(Fore.GREEN + "[INFO]\t Max possible memory usage for PostgreSQL is good")
 
 track_activity_ratio = track_activity_size*100/mem.total
 if track_activity_ratio > 1:
