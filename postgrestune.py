@@ -42,6 +42,30 @@ import datetime
 from colorama import Fore
 import time
 
+advices={}
+priority_advice={}
+
+def add_advice(category, priority, advice):
+  priority_advice[priority] = advice
+  advices[category] = priority_advice
+  
+def print_advices():
+  for category,priority_advice in advices.iteritems():
+    print(Fore.WHITE + '-----  {}  -----'.format(category))
+    # print(category,priority_advice)
+    for priority,advice in priority_advice.iteritems():
+      if priority == 'medium':
+        print(Fore.YELLOW + priority,advice)
+
+def print_report_bad(string):
+  print(Fore.RED + "[BAD]:\t{}".format(string))
+
+def print_report_warn(string):
+  print(Fore.YELLOW + "[WARN]:\t{}".format(string))
+
+def print_report_ok(string):
+  print(Fore.GREEN + "[OK]:\t{}".format(string))
+
 def convert_to_byte(size):
   size_byte=None
   if re.search('gb', size, re.IGNORECASE):
@@ -70,7 +94,7 @@ mem = psutil.virtual_memory()
 # Report
 # OS version
 print(Fore.WHITE   + "=====  OS information  =====")
-print(Fore.GREEN + '[INFO]\t linux_distribution  : {0}'.format(platform.linux_distribution()))
+print(Fore.GREEN + '[INFO]\t linux_distribution  : ' + ' '.join(str(p) for p in platform.linux_distribution()))
 # OS Memory
 print(Fore.GREEN + '[INFO]\t OS total memory     : {0}'.format(format_bytes(mem.total)))
 print(Fore.BLUE  + '[INFO]\t node                : {0}'.format(platform.node()))
@@ -93,6 +117,13 @@ def cur_execute(sql_query):
   except psycopg2.Error as e:
    print("Error {0}".format(e))
   return cur.fetchone()
+
+def get_setting(setting):
+  try:
+   cur.execute("SHOW " + setting)
+  except psycopg2.Error as e:
+   print("Error {0}".format(e))
+  return cur.fetchone()[0]
 
 def get_value_proc(path_of_proc):
     try:
@@ -189,6 +220,29 @@ def select_database():
   
 select_database()
 
+print(Fore.WHITE + "-----  Extensions  -----")
+
+def select_extensions():
+  try:
+   cur.execute("select extname from pg_extension")
+  except psycopg2.Error as e:
+   print(Fore.RED + "Error {0}".format(e))
+  list_extensions = [i[0] for i in cur.fetchall()]
+  print(Fore.GREEN + '[INFO]\t Number of activated extensions : {}'.format(len(list_extensions)))
+  print(Fore.GREEN + '[INFO]\t Activated extensions : ' + ', '.join(str(p) for p in list_extensions))
+  
+select_extensions()
+
+def check_pg_stat_statements():
+  available_pg_stat_statements=cur_execute("SELECT * FROM pg_available_extensions WHERE name = 'pg_stat_statements' and installed_version is not null;")
+  if available_pg_stat_statements == None:
+    print(Fore.RED + "[ERROR]\t Extensions pg_stat_statements is disabled")
+    print(Fore.YELLOW + "[WARN]\t Enable pg_stat_statements to collect statistics on all queries (not only queries longer than log_min_duration_statement in logs)")
+    print(Fore.YELLOW + "[WARN]\t Add the following entries to your postgres.conf: shared_preload_libraries = 'pg_stat_statements'")
+    print(Fore.YELLOW + "[WARN]\t restart the PostgreSQL daemon and run 'create extension pg_stat_statements' on your database")
+
+check_pg_stat_statements()
+
 print('-----  Users  -----')
 
 def check_username_equal_password():
@@ -204,28 +258,18 @@ def check_username_equal_password():
 
 check_username_equal_password()
 
-print(Fore.WHITE + "-----  Extensions  -----")
-
-def select_extensions():
+def password_encryption():
   try:
-   cur.execute("select extname from pg_extension")
+   cur.execute("show password_encryption;")
   except psycopg2.Error as e:
    print(Fore.RED + "Error {0}".format(e))
-  list_extensions = [i[0] for i in cur.fetchall()]
-  print(Fore.GREEN + '[INFO]\t Number of activated extensions : {}'.format(len(list_extensions)))
-  print(Fore.GREEN + '[INFO]\t Activated extensions : {}'.format(list_extensions))
-  
-select_extensions()
+  config_password_encryption = cur.fetchone()[0]
+  if password_encryption == 'off':
+    print(Fore.RED + '[ERROR]\t Password encryption is disable by default. Password will not be encrypted until explicitely asked')
+  else:
+    print(Fore.GREEN + '[INFO]\t Password encryption is enabled')
 
-def check_pg_stat_statements():
-  available_pg_stat_statements=cur_execute("SELECT * FROM pg_available_extensions WHERE name = 'pg_stat_statements' and installed_version is not null;")
-  if available_pg_stat_statements == None:
-    print(Fore.RED + "[ERROR]\t Extensions pg_stat_statements is disabled")
-    print(Fore.YELLOW + "[WARN]\t Enable pg_stat_statements to collect statistics on all queries (not only queries longer than log_min_duration_statement in logs)")
-    print(Fore.YELLOW + "[WARN]\t Add the following entries to your postgres.conf: shared_preload_libraries = 'pg_stat_statements'")
-    print(Fore.YELLOW + "[WARN]\t restart the PostgreSQL daemon and run 'create extension pg_stat_statements' on your database")
-
-check_pg_stat_statements()
+password_encryption()
 
 print(Fore.WHITE + "-----  Connection information  -----")
 
@@ -255,11 +299,11 @@ def superuser_reserved_connections():
 def superuser_reserved_connections_ratio():
   superuser_reserved_connections_ratio=superuser_reserved_connections()*100/max_connections()
   if superuser_reserved_connections() == 0:
-    print(Fore.RED + "No connection slot is reserved for superuser. In case of connection saturation you will not be able to connect to investigate or kill connections")
+    print(Fore.RED + "[ERROR]\t No connection slot is reserved for superuser. In case of connection saturation you will not be able to connect to investigate or kill connections")
   elif superuser_reserved_connections_ratio > 20:
-    print(Fore.YELLOW + "{0} of connections are reserved for super user. This is too much and can limit other users connections".format(superuser_reserved_connections_ratio))
+    print(Fore.YELLOW + "[WARN]\t {0} of connections are reserved for super user. This is too much and can limit other users connections".format(superuser_reserved_connections_ratio))
   else:
-    print(Fore.GREEN + "superuser_reserved_connections are reserved for super user {0} connection".format(superuser_reserved_connections()))
+    print(Fore.GREEN + "[INFO]\t {0} are reserved for super user connection {1}%".format(superuser_reserved_connections(),superuser_reserved_connections_ratio))
 
 superuser_reserved_connections_ratio()
 
@@ -293,7 +337,7 @@ def work_mem():
 
 work_mem_total=convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100*max_connections();
 print(Fore.GREEN + "[INFO]\t configured work_mem {0}".format(work_mem()))
-print(Fore.GREEN + "[INFO]\t Using an average ratio of work_mem buffers by connection of {0}".format(WORK_MEM_PER_CONNECTION_PERCENT))
+print(Fore.GREEN + "[INFO]\t Using an average ratio of work_mem buffers by connection of {0}%".format(WORK_MEM_PER_CONNECTION_PERCENT))
 print(Fore.GREEN + "[INFO]\t total work_mem (per connection): {}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
 
 def shared_buffers():
@@ -316,7 +360,7 @@ max_processes = max_connections() + autovacuum_max_workers()
 if POSTGRESQL_VERSION_MAJOR_CURRENT >= '9.4':
   max_processes = max_processes + max_worker_processes()
 
-print(Fore.GREEN + "Track activity reserved size : " + str(max_processes))
+print(Fore.GREEN + "[INFO]\t Track activity reserved size : " + str(max_processes))
 
 def track_activity_query_size():
   return int(cur_execute("show track_activity_query_size;")[0])
@@ -372,10 +416,10 @@ print(Fore.GREEN + "[INFO]\t Size of all databases : {}".format(format_bytes(int
 
 shared_buffers_usage = int(all_databases_size())/convert_to_byte(shared_buffers())
 if shared_buffers_usage < 0.7:
-  print("shared_buffer is too big for the total databases size, memory is lost")
+  print(Fore.YELLOW + "[WARN]\t shared_buffer is too big for the total databases size, memory is lost")
 
 percent_postgresql_max_memory = max_memory*100./mem.total
-print(Fore.BLUE + "PostgreSQL maximum memory usage: {0:.2f}%".format(percent_postgresql_max_memory) + " of system RAM")
+print(Fore.BLUE + "[INFO]\t PostgreSQL maximum memory usage: {0:.2f}%".format(percent_postgresql_max_memory) + " of system RAM")
 
 if percent_postgresql_max_memory > 100:
   print(Fore.RED + "BAD: Max possible memory usage for PostgreSQL is more than system total RAM. Add more RAM or reduce PostgreSQL memory")
@@ -406,12 +450,53 @@ def log_min_duration_statement():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
+## Logs
+print(Fore.WHITE + '-----  Logs  ----')
+
 if log_min_duration_statement() == '-1':
-  print(Fore.RED + "BAD: log of long queries is desactivated. It will be more difficult to optimize query performances")
+  print(Fore.YELLOW + "[WARN]\t log of long queries is desactivated. It will be more difficult to optimize query performances")
 elif log_min_duration_statement < 1000:
-  print(Fore.RED + "BAD: log_min_duration_statement=" + log_min_duration_statement() + ": all requests of more than 1 sec will be written in log. It can be disk intensive (I/O and space)")
+  print(Fore.RED + "[BAD]\t log_min_duration_statement=" + log_min_duration_statement() + ": all requests of more than 1 sec will be written in log. It can be disk intensive (I/O and space)")
 else:
-  print(Fore.GREEN + "long queries will be logged")
+  print(Fore.GREEN + "[INFO]\t long queries will be logged")
+
+# log_statement
+log_statement=get_setting('log_statement')
+if log_statement == 'all':
+  print(Fore.RED + "[BAD]\t log_statement=all : this is very disk intensive and only usefull for debug")
+elif log_statement == 'mod':
+  print(Fore.YELLOW + "[WARN]\t log_statement=mod : this is disk intensive")
+else:
+  print(Fore.GREEN + "[INFO]\t log_statement = " + log_statement)
+
+## Autovacuum
+print(Fore.WHITE + '-----  Autovacuum  -----')
+
+if get_setting('autovacuum') == 'on':
+  print(Fore.GREEN + "[INFO]\t autovacuum is activated")
+  autovacuum_max_workers = get_setting('autovacuum_max_workers')
+  print(Fore.GREEN + "[INFO]\t autovacuum_max_workers: " + autovacuum_max_workers)
+else:
+  print(Fore.RED + "[BAD]:\t autovacuum is not activated. This is bad except if you known what you do.")
+
+## Checkpoint
+print(Fore.WHITE + '-----  Checkpoint  -----')
+checkpoint_completion_target=float(get_setting('checkpoint_completion_target'))
+if checkpoint_completion_target < 0.5:
+  print_report_bad("checkpoint_completion_target({}) is lower than default (0.5)".format(checkpoint_completion_target))
+  add_advice("checkpoint","urgent","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval");
+elif checkpoint_completion_target >= 0.5 and checkpoint_completion_target <= 0.7:
+  print_report_warn("checkpoint_completion_target({}) is low".format(checkpoint_completion_target))
+  add_advice("checkpoint","medium","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval");
+elif checkpoint_completion_target >= 0.7 and checkpoint_completion_target <= 0.9:
+  print_report_ok("checkpoint_completion_target({}) OK".format(checkpoint_completion_target))
+elif checkpoint_completion_target > 0.9 and checkpoint_completion_target < 1:
+  print_report_warn("checkpoint_completion_target({}) is too near to 1".format(checkpoint_completion_target))
+  add_advice("checkpoint","medium","Your checkpoint completion target is too high. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval");
+else:
+  print_report_bad("checkpoint_completion_target too high ({})".format(checkpoint_completion_target))
+
+print_advices()
 
 print(Fore.RESET)
 
