@@ -80,7 +80,20 @@ def print_report_ok(string):
   print(Fore.GREEN + "[OK]:\t{}".format(string))
 
 def print_report_info(string):
-  print(Fore.WHITE + "[INFO]:\t{}".format(string))
+  print(Fore.MAGENTA + "[INFO]:\t{}".format(string))
+
+def print_report_unknown(string):
+  print(Fore.CYAN + "[INFO]:\t{}".format(string))
+
+def min_version(min_version):
+  if version.parse(postgresql_current_version) < version.parse(min_version):
+    # print('{0} < {1}'.format(version.parse(postgresql_current_version), version.parse(min_version)))
+    # print('postgresql_current_version < min_version')
+    return 0
+  else:
+    # print('{0} > {1}'.format(version.parse(postgresql_current_version), version.parse(min_version)))
+    # print('postgresql_current_version > min_version')
+    return 1
 
 def convert_to_byte(size):
   size_byte=None
@@ -133,6 +146,21 @@ def cur_execute(sql_query):
   except psycopg2.Error as e:
    print("Error {0}".format(e))
   return cur.fetchone()
+
+def select_one_value(sql_query):
+  try:
+   cur.execute(sql_query)
+  except psycopg2.Error as e:
+   print("Error {0}".format(e))
+  return cur.fetchone()
+
+def select_one_column(sql_query):
+  try:
+   cur.execute(sql_query)
+  except psycopg2.Error as e:
+   print("Error {0}".format(e))
+  return cur.fetchall()
+
 
 def get_setting(setting):
   try:
@@ -566,28 +594,75 @@ index_percent=sum_index_size*100/sum_total_relation_size
 print_report_info("Database $database tables size : {0} ({1}%)".format(format_bytes(sum_table_size), table_percent))
 print_report_info("Database $database indexes size : {0} ({1}%)".format(format_bytes(sum_index_size), index_percent))
 
-def min_version(min_version):
-  if version.parse(postgresql_current_version) > version.parse(min_version):
-    print('postgresql_current_version > min_version')
-    return 0
-  else:
-    print('postgresql_current_version > min_version')
-    return 1
-
 ## Tablespace location
 print_header_2("Tablespace location");
-# if (min_version('9.2')):
-cur.execute("select spcname,pg_tablespace_location(oid) from pg_tablespace where pg_tablespace_location(oid) like (select setting from pg_settings where name='data_directory')||'/%';")
-list_tablespace_in_data_dir = cur.fetchall()
-dict_tablespace_in_data_dir = dict((y, x) for x, y in list_tablespace_in_data_dir)
-if list_tablespace_in_data_dir == 0:
-  print_report_ok("No tablespace in PGDATA");
+if (min_version('9.2')):
+  cur.execute("select spcname,pg_tablespace_location(oid) from pg_tablespace where pg_tablespace_location(oid) like (select setting from pg_settings where name='data_directory')||'/%';")
+  list_tablespace_in_data_dir = cur.fetchall()
+  dict_tablespace_in_data_dir = dict((y, x) for x, y in list_tablespace_in_data_dir)
+  if list_tablespace_in_data_dir == 0:
+    print_report_ok("No tablespace in PGDATA");
+  else:
+    print_report_bad("Some tablespaces are in PGDATA : " + ', '.join(path_tablespace for path_tablespace in dict_tablespace_in_data_dir))
+    add_advice('tablespaces','urgent','Some tablespaces are in PGDATA. Move them outside of this folder.')
 else:
-  print_report_bad("Some tablespaces are in PGDATA : " + ', '.join(path_tablespace for path_tablespace in dict_tablespace_in_data_dir))
-  add_advice('tablespaces','urgent','Some tablespaces are in PGDATA. Move them outside of this folder.')
+  print_report_unknown("This check is not supported before 9.2")
 
-# else:
-#   print_report_unknown("This check is not supported before 9.2")
+## Shared buffer usage
+print_header_2("Shared buffer hit rate");
+### Heap hit rate
+shared_buffer_heap_hit_rate = float(select_one_value("select sum(heap_blks_hit)*100/(sum(heap_blks_read)+sum(heap_blks_hit)+1) from pg_statio_all_tables ;")[0])
+print_report_info("shared_buffer_heap_hit_rate: {0:.2f}%".format(shared_buffer_heap_hit_rate))
+### TOAST hit rate
+shared_buffer_toast_hit_rate = float(select_one_value("select sum(toast_blks_hit)*100/(sum(toast_blks_read)+sum(toast_blks_hit)+1) from pg_statio_all_tables ;")[0])
+print_report_info("shared_buffer_toast_hit_rate: {0:.2f}%".format(shared_buffer_toast_hit_rate))
+
+# Tidx hit rate
+shared_buffer_tidx_hit_rate = float(select_one_value("select sum(tidx_blks_hit)*100/(sum(tidx_blks_read)+sum(tidx_blks_hit)+1) from pg_statio_all_tables ;")[0])
+print_report_info("shared_buffer_tidx_hit_rate: {0:.2f}%".format(shared_buffer_tidx_hit_rate))
+
+# Idx hit rate
+shared_buffer_idx_hit_rate = float(select_one_value("select sum(idx_blks_hit)*100/(sum(idx_blks_read)+sum(idx_blks_hit)+1) from pg_statio_all_tables ;")[0])
+print_report_info("shared_buffer_idx_hit_rate: {0:.2f}%".format(shared_buffer_idx_hit_rate))
+if shared_buffer_idx_hit_rate > 99.99:
+  print_report_info("shared buffer idx hit rate too high. You can reducte shared_buffer if you need")
+elif shared_buffer_idx_hit_rate > 98:
+  print_report_ok("Shared buffer idx hit rate is very good")
+elif shared_buffer_idx_hit_rate>90:
+  print_report_warn("Shared buffer idx hit rate is quite good. Increase shared_buffer memory to increase hit rate")
+else:
+  print_report_bad("Shared buffer idx hit rate is too low. Increase shared_buffer memory to increase hit rate")
+
+## Indexes
+print_header_2("Indexes");
+# Invalid indexes
+invalid_indexes=select_one_column("select relname from pg_index join pg_class on indexrelid=oid where indisvalid=false")
+if len(invalid_indexes) > 0:
+  print_report_bad("There are invalid indexes in the database : @Invalid_indexes")
+  add_advice("index","urgent","You have invalid indexes in the database. Please check/rebuild them")
+else:
+  print_report_ok("No invalid indexes")
+# Unused indexes
+unused_indexes = None
+if min_version('9.0'):
+  unused_indexes = select_one_column("select indexrelname from pg_stat_user_indexes where idx_scan=0 and not exists (select 1 from pg_constraint where conindid=indexrelid)")
+else:
+  unused_indexes = select_one_column("select indexrelname from pg_stat_user_indexes where idx_scan=0")
+if len(unused_indexes) > 0:
+  print_report_warn("Some indexes are unused since last statistics: @Unused_indexes")
+  add_advice("index","medium","You have unused indexes in the database since last statistics. Please remove them if they are never use")
+else:
+  print_report_ok("No unused indexes")
+
+## Procedures 
+print_header_2("Procedures");
+# Procedures with default cost
+default_cost_procs = select_one_column("select n.nspname||'.'||p.proname from pg_catalog.pg_proc p left join pg_catalog.pg_namespace n on n.oid = p.pronamespace where pg_catalog.pg_function_is_visible(p.oid) and n.nspname not in ('pg_catalog','information_schema') and p.prorows<>1000 and p.procost<>10")
+if len(default_cost_procs) > 0:
+  print_report_warn("Some user procedures does not have custom cost and rows settings : @Default_cost_procs")
+  add_advice("proc","low","You have custom procedures with default cost and rows setting. Please reconfigure them with specific values to help the planer")
+else:
+  print_report_ok("No procedures with default costs")
 
 print_advices()
 
