@@ -140,12 +140,12 @@ except IOError as e:
   print(Fore.RED + "Error {0}".format(e))
 cur = conn.cursor()
 
-def cur_execute(sql_query):
-  try:
-   cur.execute(sql_query)
-  except psycopg2.Error as e:
-   print("Error {0}".format(e))
-  return cur.fetchone()
+# def cur_execute(sql_query):
+#   try:
+#    cur.execute(sql_query)
+#   except psycopg2.Error as e:
+#    print("Error {0}".format(e))
+#   return cur.fetchone()
 
 def select_one_value(sql_query):
   try:
@@ -200,7 +200,7 @@ check_overcommit_ratio()
 
 print(Fore.WHITE + "=====  General instance informations  =====")
 
-postgresql_current_version=cur_execute("SELECT version();")[0].split(' ')[1]
+postgresql_current_version=select_one_value("SELECT version();")[0].split(' ')[1]
 POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_current_version)[0]
 
 ## Version
@@ -281,7 +281,7 @@ def select_extensions():
 select_extensions()
 
 def check_pg_stat_statements():
-  available_pg_stat_statements=cur_execute("SELECT * FROM pg_available_extensions WHERE name = 'pg_stat_statements' and installed_version is not null;")
+  available_pg_stat_statements=select_one_value("SELECT * FROM pg_available_extensions WHERE name = 'pg_stat_statements' and installed_version is not null;")
   if available_pg_stat_statements == None:
     print(Fore.RED + "[ERROR]\t Extensions pg_stat_statements is disabled")
     print(Fore.YELLOW + "[WARN]\t Enable pg_stat_statements to collect statistics on all queries (not only queries longer than log_min_duration_statement in logs)")
@@ -321,12 +321,12 @@ password_encryption()
 print(Fore.WHITE + "-----  Connection information  -----")
 
 def max_connections():
-  return int(cur_execute("SELECT setting FROM pg_settings WHERE name = 'max_connections';")[0])
+  return int(select_one_value("SELECT setting FROM pg_settings WHERE name = 'max_connections';")[0])
 
 print(Fore.BLUE + "[INFO]\t max_connections: {}".format(max_connections()))
 
 def current_connections():
-  return int(cur_execute("SELECT count(*) FROM pg_stat_activity;")[0])
+  return int(select_one_value("SELECT count(*) FROM pg_stat_activity;")[0])
 
 current_connections_percent=current_connections()*100/max_connections()
 
@@ -341,7 +341,7 @@ def check_current_connections_percent():
 check_current_connections_percent()
 
 def superuser_reserved_connections():
-  return int(cur_execute("show superuser_reserved_connections;")[0])
+  return int(select_one_value("show superuser_reserved_connections;")[0])
 
 def superuser_reserved_connections_ratio():
   superuser_reserved_connections_ratio=superuser_reserved_connections()*100/max_connections()
@@ -355,7 +355,7 @@ def superuser_reserved_connections_ratio():
 superuser_reserved_connections_ratio()
 
 def average_connection_age():
-  return int(cur_execute("select extract(epoch from avg(now()-backend_start)) as age from pg_stat_activity;")[0])
+  return int(select_one_value("select extract(epoch from avg(now()-backend_start)) as age from pg_stat_activity;")[0])
 
 def convert_time(sec): 
     td = datetime.timedelta(seconds=sec) 
@@ -397,10 +397,10 @@ def shared_buffers():
 print(Fore.GREEN + "[INFO]\t shared_buffers: {}".format(shared_buffers()));
 
 def autovacuum_max_workers():
-  return int(cur_execute("show autovacuum_max_workers;")[0])
+  return int(select_one_value("show autovacuum_max_workers;")[0])
 
 def max_worker_processes():
-  return int(cur_execute("show max_worker_processes;")[0])
+  return int(select_one_value("show max_worker_processes;")[0])
 
 max_processes = max_connections() + autovacuum_max_workers()
 
@@ -410,7 +410,7 @@ if POSTGRESQL_VERSION_MAJOR_CURRENT >= '9.4':
 print(Fore.GREEN + "[INFO]\t Track activity reserved size : " + str(max_processes))
 
 def track_activity_query_size():
-  return int(cur_execute("show track_activity_query_size;")[0])
+  return int(select_one_value("show track_activity_query_size;")[0])
 
 track_activity_size = track_activity_query_size()*max_processes
 
@@ -585,9 +585,9 @@ print_header_1("Database information for database $database");
 
 ## Database size
 print_header_2("Database size");
-sum_total_relation_size=int(cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
+sum_total_relation_size=int(select_one_value("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
 print_report_info("Database $database total size : {}".format(format_bytes(sum_total_relation_size)))
-sum_table_size=int(cur_execute("select sum(pg_table_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
+sum_table_size=int(select_one_value("select sum(pg_table_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
 sum_index_size=sum_total_relation_size-sum_table_size
 table_percent=sum_table_size*100/sum_total_relation_size
 index_percent=sum_index_size*100/sum_total_relation_size
