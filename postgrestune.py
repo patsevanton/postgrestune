@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+# This project is fork https://github.com/jfcoz/postgresqltuner rewrite to Python
+#
+# postgresqltuner.pl is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
 ### Install requirements: ###
 # apt-get install python-psutil or yum install python2-psutil
 # apt-get install python-pip or yum install python2-pip
@@ -43,9 +49,9 @@ from colorama import Fore
 import time
 
 advices={}
-priority_advice={}
 
 def add_advice(category, priority, advice):
+  priority_advice={}
   priority_advice[priority] = advice
   advices[category] = priority_advice
 
@@ -58,6 +64,7 @@ def print_header_2(string):
   print(Fore.RESET)
   
 def print_advices():
+  print_header_1("Configuration advices");
   for category,priority_advice in advices.iteritems():
     print_header_2(category);
     for priority,advice in priority_advice.iteritems():
@@ -67,8 +74,8 @@ def print_advices():
         print(Fore.YELLOW + priority,advice)
       elif priority == 'low':
         print(Fore.GREEN + priority,advice)
-    print(Fore.RESET)
-  print(Fore.RESET)  
+    print(Fore.RESET, end='')
+  print(Fore.RESET, end='')  
 
 def print_report_bad(string):
   print(Fore.RED + "[BAD]:\t{}".format(string))
@@ -154,7 +161,6 @@ def select_one_column(sql_query):
    print("Error {0}".format(e))
   return cur.fetchall()
 
-
 def get_setting(setting):
   try:
    cur.execute("SHOW " + setting)
@@ -175,8 +181,9 @@ def check_overcommit_memory():
   overcommit_memory = int(get_value_proc('/proc/sys/vm/overcommit_memory'))
   if overcommit_memory != 2:
     print(Fore.YELLOW + "[WARN]\t overcommit_memory: {0}".format(overcommit_memory))
-    print(Fore.YELLOW + "[WARN]\t Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
-    print(Fore.YELLOW + "[WARN]\t set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. This will disable memory overcommitment and avoid postgresql killed by OOM killer.")
+    print_report_bad("Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
+    # print(Fore.YELLOW + "[WARN]\t Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
+    add_advice('sysctl','urgent','set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. This will disable memory overcommitment and avoid postgresql killed by OOM killer.')
 
 check_overcommit_memory()
 
@@ -521,16 +528,16 @@ else:
 print_header_2("Checkpoint")
 checkpoint_completion_target=float(get_setting('checkpoint_completion_target'))
 if checkpoint_completion_target < 0.5:
-  print_report_bad("checkpoint_completion_target({}) is lower than default (0.5)".format(checkpoint_completion_target))
-  add_advice("checkpoint","urgent","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval");
+  print_report_bad("checkpoint_completion_target ({}) is lower than default (0.5)".format(checkpoint_completion_target))
+  add_advice("checkpoint","urgent","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
 elif checkpoint_completion_target >= 0.5 and checkpoint_completion_target <= 0.7:
-  print_report_warn("checkpoint_completion_target({}) is low".format(checkpoint_completion_target))
-  add_advice("checkpoint","medium","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval");
+  print_report_warn("checkpoint_completion_target ({}) is low".format(checkpoint_completion_target))
+  add_advice("checkpoint","medium","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
 elif checkpoint_completion_target >= 0.7 and checkpoint_completion_target <= 0.9:
-  print_report_ok("checkpoint_completion_target({}) OK".format(checkpoint_completion_target))
+  print_report_ok("checkpoint_completion_target ({}) OK".format(checkpoint_completion_target))
 elif checkpoint_completion_target > 0.9 and checkpoint_completion_target < 1:
-  print_report_warn("checkpoint_completion_target({}) is too near to 1".format(checkpoint_completion_target))
-  add_advice("checkpoint","medium","Your checkpoint completion target is too high. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval");
+  print_report_warn("checkpoint_completion_target ({}) is too near to 1".format(checkpoint_completion_target))
+  add_advice("checkpoint","medium","Your checkpoint completion target is too high. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
 else:
   print_report_bad("checkpoint_completion_target too high ({})".format(checkpoint_completion_target))
 
