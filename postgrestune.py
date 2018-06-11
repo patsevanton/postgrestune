@@ -62,8 +62,12 @@ def print_advices():
     print(Fore.RESET, end='')
   print(Fore.RESET, end='')  
 
-def print_header_2(string):
+def print_header_1(string):
   print(Fore.WHITE + '===== ' + string + ' =====', end='')
+  print(Fore.RESET)
+
+def print_header_2(string):
+  print(Fore.WHITE + '----- ' + string + ' -----', end='')
   print(Fore.RESET)
 
 def print_report_bad(string):
@@ -504,6 +508,59 @@ elif checkpoint_completion_target > 0.9 and checkpoint_completion_target < 1:
   add_advice("checkpoint","medium","Your checkpoint completion target is too high. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval");
 else:
   print_report_bad("checkpoint_completion_target too high ({})".format(checkpoint_completion_target))
+
+## Disk access
+print_header_2("Disk access")
+fsync=get_setting('fsync')
+if fsync == 'on':
+  print_report_ok("fsync is on")
+else:
+  print_report_bad("fsync is off. You can loss data in case of crash")
+  add_advice("checkpoint","urgent","set fsync to on. You can loose data in case of database crash !")
+if get_setting('synchronize_seqscans') == 'on':
+  print_report_ok("synchronize_seqscans is on")
+else:
+  print_report_warn("synchronize_seqscans is off")
+  add_advice("seqscan","medium","set synchronize_seqscans to synchronize seqscans and reduce disks I/O")
+
+# WAL / PITR
+print_header_2("WAL")
+wal_level=get_setting('wal_level')
+if wal_level == 'minimal':
+  print_report_bad("The wal_level minimal does not allow PITR backup and recovery")
+  add_advice("backup","urgent","Configure your wal_level to a level which allow PITR backup and recovery")
+
+## Planner
+print_header_2("Planner");
+def costs_settings():
+  try:
+   cur.execute("select name from pg_settings where name like '%cost%' and setting<>boot_val;")
+  except psycopg2.Error as e:
+   print(Fore.RED + "Error {0}".format(e))
+  if cur != None:
+    ModifiedCosts = [i[0] for i in cur.fetchall()]
+    if ModifiedCosts > 0:
+      print_report_warn("some costs settings are not the defaults : " + ', '.join(str(p) for p in ModifiedCosts) + ". This can have bad impacts on performance. Use at your own risks")
+    else:
+      print_report_ok("costs settings are defaults")
+
+costs_settings()
+
+# Database information
+print_header_1("Database information for database $database");
+
+## Database size
+print_header_2("Database size");
+# sum_total_relation_size=int(cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables"))
+print(cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables"))
+# print_report_info("Database $database total size : ".format(sum_total_relation_size))
+# sum_table_size=select_one_value("select sum(pg_table_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")
+# sum_index_size=sum_total_relation_size-sum_table_size
+# table_percent=sum_table_size*100/sum_total_relation_size
+# index_percent=sum_index_size*100/sum_total_relation_size
+# print_report_info("Database $database tables size : ".format_size($sum_table_size)." (".format_percent($table_percent).")")
+# print_report_info("Database $database indexes size : ".format_size($sum_index_size)." (".format_percent($index_percent).")")
+
 
 print_advices()
 
