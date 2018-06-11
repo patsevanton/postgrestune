@@ -54,13 +54,13 @@ def print_advices():
     print(Fore.WHITE + '-----  {}  -----'.format(category))
     for priority,advice in priority_advice.iteritems():
       if priority == 'urgent':
-        print(Fore.RED + priority,advice, end='')
+        print(Fore.RED + priority,advice)
       elif priority == 'medium':
-        print(Fore.YELLOW + priority,advice, end='')
+        print(Fore.YELLOW + priority,advice)
       elif priority == 'low':
-        print(Fore.GREEN + priority,advice, end='')
-    print(Fore.RESET, end='')
-  print(Fore.RESET, end='')  
+        print(Fore.GREEN + priority,advice)
+    print(Fore.RESET)
+  print(Fore.RESET)  
 
 def print_header_1(string):
   print(Fore.WHITE + '===== ' + string + ' =====', end='')
@@ -172,30 +172,33 @@ check_overcommit_ratio()
 
 print(Fore.WHITE + "=====  General instance informations  =====")
 
+postgresql_current_version=cur_execute("SELECT version();")[0].split(' ')[1]
+POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_current_version)[0]
+
 ## Version
 print('-----  Version  -----')
 def check_postgresql_version():
-  postgresql_version=cur_execute("SELECT version();")[0].split(' ')[1]
-  POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_version)[0]
+  # print(type(postgresql_version))
+  # print(type(POSTGRESQL_VERSION_MAJOR_CURRENT))
 
   if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
     print(Fore.YELLOW + "[WARN]\t Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     print(Fore.YELLOW + "[INFO]\t You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if POSTGRESQL_VERSION_MAJOR_CURRENT == '9.6':
-      if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_96):
+      if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_96):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.5':
-      if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_95):
+      if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_95):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.4':
-      if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_94):
+      if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_94):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.3':
-      if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_93):
+      if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_93):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   else:
     print(Fore.GREEN + "[OK]\t You are using last postgresql version {}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
-    if version.parse(postgresql_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
+    if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
       print(Fore.RED + "[WARN]\t You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
   return POSTGRESQL_VERSION_MAJOR_CURRENT
 
@@ -562,6 +565,29 @@ table_percent=sum_table_size*100/sum_total_relation_size
 index_percent=sum_index_size*100/sum_total_relation_size
 print_report_info("Database $database tables size : {0} ({1}%)".format(format_bytes(sum_table_size), table_percent))
 print_report_info("Database $database indexes size : {0} ({1}%)".format(format_bytes(sum_index_size), index_percent))
+
+def min_version(min_version):
+  if version.parse(postgresql_current_version) > version.parse(min_version):
+    print('postgresql_current_version > min_version')
+    return 0
+  else:
+    print('postgresql_current_version > min_version')
+    return 1
+
+## Tablespace location
+print_header_2("Tablespace location");
+# if (min_version('9.2')):
+cur.execute("select spcname,pg_tablespace_location(oid) from pg_tablespace where pg_tablespace_location(oid) like (select setting from pg_settings where name='data_directory')||'/%';")
+list_tablespace_in_data_dir = cur.fetchall()
+dict_tablespace_in_data_dir = dict((y, x) for x, y in list_tablespace_in_data_dir)
+if list_tablespace_in_data_dir == 0:
+  print_report_ok("No tablespace in PGDATA");
+else:
+  print_report_bad("Some tablespaces are in PGDATA : " + ', '.join(path_tablespace for path_tablespace in dict_tablespace_in_data_dir))
+  add_advice('tablespaces','urgent','Some tablespaces are in PGDATA. Move them outside of this folder.')
+
+# else:
+#   print_report_unknown("This check is not supported before 9.2")
 
 print_advices()
 
