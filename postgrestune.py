@@ -79,6 +79,9 @@ def print_report_warn(string):
 def print_report_ok(string):
   print(Fore.GREEN + "[OK]:\t{}".format(string))
 
+def print_report_info(string):
+  print(Fore.WHITE + "[INFO]:\t{}".format(string))
+
 def convert_to_byte(size):
   size_byte=None
   if re.search('gb', size, re.IGNORECASE):
@@ -552,13 +555,13 @@ print_header_1("Database information for database $database");
 ## Database size
 print_header_2("Database size");
 sum_total_relation_size=int(cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
-print_report_info("Database $database total size : ".format(sum_total_relation_size))
-sum_table_size=select_one_value("select sum(pg_table_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")
+print_report_info("Database $database total size : {}".format(format_bytes(sum_total_relation_size)))
+sum_table_size=int(cur_execute("select sum(pg_table_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
 sum_index_size=sum_total_relation_size-sum_table_size
 table_percent=sum_table_size*100/sum_total_relation_size
 index_percent=sum_index_size*100/sum_total_relation_size
-print_report_info("Database $database tables size : " + sum_table_size + " (" + table_percent + ")")
-print_report_info("Database $database indexes size : " + sum_index_size + " (" + index_percent + ")")
+print_report_info("Database $database tables size : {0} ({1}%)".format(format_bytes(sum_table_size), table_percent))
+print_report_info("Database $database indexes size : {0} ({1}%)".format(format_bytes(sum_index_size), index_percent))
 
 print_advices()
 
