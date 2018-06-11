@@ -551,16 +551,14 @@ print_header_1("Database information for database $database");
 
 ## Database size
 print_header_2("Database size");
-# sum_total_relation_size=int(cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables"))
-print(cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables"))
-# print_report_info("Database $database total size : ".format(sum_total_relation_size))
-# sum_table_size=select_one_value("select sum(pg_table_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")
-# sum_index_size=sum_total_relation_size-sum_table_size
-# table_percent=sum_table_size*100/sum_total_relation_size
-# index_percent=sum_index_size*100/sum_total_relation_size
-# print_report_info("Database $database tables size : ".format_size($sum_table_size)." (".format_percent($table_percent).")")
-# print_report_info("Database $database indexes size : ".format_size($sum_index_size)." (".format_percent($index_percent).")")
-
+sum_total_relation_size=int(cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
+print_report_info("Database $database total size : ".format(sum_total_relation_size))
+sum_table_size=select_one_value("select sum(pg_table_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")
+sum_index_size=sum_total_relation_size-sum_table_size
+table_percent=sum_table_size*100/sum_total_relation_size
+index_percent=sum_index_size*100/sum_total_relation_size
+print_report_info("Database $database tables size : " + sum_table_size + " (" + table_percent + ")")
+print_report_info("Database $database indexes size : " + sum_index_size + " (" + index_percent + ")")
 
 print_advices()
 

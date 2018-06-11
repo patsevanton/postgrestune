@@ -16,4 +16,5 @@ def cur_execute(sql_query):
    print("Error {0}".format(e))
   return cur.fetchone()
 
-print(cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables"))
+output_cur = cur_execute("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0]
+print(output_cur)
