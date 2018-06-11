@@ -62,6 +62,21 @@ def print_header_1(string):
 def print_header_2(string):
   print(Fore.WHITE + '----- ' + string + ' -----', end='')
   print(Fore.RESET)
+
+def print_report_ok(string):
+  print(Fore.GREEN + "[OK]:\t{}".format(string))
+
+def print_report_warn(string):
+  print(Fore.YELLOW + "[WARN]:\t{}".format(string))
+
+def print_report_bad(string):
+  print(Fore.RED + "[BAD]:\t{}".format(string))
+
+def print_report_info(string):
+  print(Fore.WHITE + "[INFO]:\t{}".format(string))
+
+def print_report_unknown(string):
+  print(Fore.CYAN + "[INFO]:\t{}".format(string))
   
 def print_advices():
   print_header_1("Configuration advices");
@@ -73,24 +88,9 @@ def print_advices():
       elif priority == 'medium':
         print(Fore.YELLOW + priority,advice)
       elif priority == 'low':
-        print(Fore.GREEN + priority,advice)
+        print(Fore.MAGENTA + priority,advice)
     print(Fore.RESET, end='')
   print(Fore.RESET, end='')  
-
-def print_report_bad(string):
-  print(Fore.RED + "[BAD]:\t{}".format(string))
-
-def print_report_warn(string):
-  print(Fore.YELLOW + "[WARN]:\t{}".format(string))
-
-def print_report_ok(string):
-  print(Fore.GREEN + "[OK]:\t{}".format(string))
-
-def print_report_info(string):
-  print(Fore.MAGENTA + "[INFO]:\t{}".format(string))
-
-def print_report_unknown(string):
-  print(Fore.CYAN + "[INFO]:\t{}".format(string))
 
 def min_version(min_version):
   if version.parse(postgresql_current_version) < version.parse(min_version):
@@ -180,23 +180,18 @@ def get_value_proc(path_of_proc):
 def check_overcommit_memory():
   overcommit_memory = int(get_value_proc('/proc/sys/vm/overcommit_memory'))
   if overcommit_memory != 2:
-    print(Fore.YELLOW + "[WARN]\t overcommit_memory: {0}".format(overcommit_memory))
     print_report_bad("Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
-    # print(Fore.YELLOW + "[WARN]\t Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
     add_advice('sysctl','urgent','set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. This will disable memory overcommitment and avoid postgresql killed by OOM killer.')
+    overcommit_ratio = int(get_value_proc('/proc/sys/vm/overcommit_ratio'))
+    print_report_info("sysctl vm.overcommit_ratio={}".format(overcommit_ratio))
+    if overcommit_ratio <= 50:
+      print_report_bad("vm.overcommit_ratio is too small, you will not be able to use more than {}*RAM+SWAP for applications".format(overcommit_ratio))
+    elif overcommit_ratio > 90:
+      print_report_bad("vm.overcommit_ratio is too high, you need to keep free space for the kernel")
+  else:
+    print_report_ok("vm.overcommit_memory is good : no memory overcommitment")
 
 check_overcommit_memory()
-
-def check_overcommit_ratio():
-  overcommit_ratio = int(get_value_proc('/proc/sys/vm/overcommit_ratio'))
-  if overcommit_ratio <= 50:
-    print(Fore.YELLOW + "[WARN]\t overcommit_ratio: {0}".format(overcommit_ratio))
-    print(Fore.YELLOW + "[WARN]\t vm.overcommit_ratio is too small, you will not be able to use more than $overcommit_ratio*RAM+SWAP for applications")
-  elif overcommit_ratio >= 90:
-    print(Fore.YELLOW + "[WARN]\t overcommit_ratio: {0}".format(overcommit_ratio))
-    print(Fore.YELLOW + "[WARN]\t vm.overcommit_ratio is too high, you need to keep free space for the kernel")
-
-check_overcommit_ratio()
 
 print_header_1('General instance informations')
 
@@ -280,10 +275,8 @@ select_extensions()
 def check_pg_stat_statements():
   available_pg_stat_statements=select_one_value("SELECT * FROM pg_available_extensions WHERE name = 'pg_stat_statements' and installed_version is not null;")
   if available_pg_stat_statements == None:
-    print(Fore.RED + "[ERROR]\t Extensions pg_stat_statements is disabled")
-    print(Fore.YELLOW + "[WARN]\t Enable pg_stat_statements to collect statistics on all queries (not only queries longer than log_min_duration_statement in logs)")
-    print(Fore.YELLOW + "[WARN]\t Add the following entries to your postgres.conf: shared_preload_libraries = 'pg_stat_statements'")
-    print(Fore.YELLOW + "[WARN]\t restart the PostgreSQL daemon and run 'create extension pg_stat_statements' on your database")
+    print_report_warn("Extensions pg_stat_statements is disabled")
+    add_advice("extension","low","Enable pg_stat_statements to collect statistics on all queries (not only queries longer than log_min_duration_statement in logs)")
 
 check_pg_stat_statements()
 
@@ -297,9 +290,9 @@ def check_username_equal_password():
    print(Fore.RED + "Error {0}".format(e))
   if cur != None:
     users_account = [i[0] for i in cur.fetchall()]
-    print(Fore.RED + '[ERROR]\t some users account have the username as password : ' + ', '.join(str(p) for p in users_account))
+    print_report_warn('some users account have the username as password : ' + ', '.join(str(p) for p in users_account))
   else:
-    print(Fore.GREEN + '[INFO]\t No user with password=username')
+    print_report_ok('No user with password=username')
 
 check_username_equal_password()
 
@@ -348,7 +341,7 @@ def superuser_reserved_connections_ratio():
   elif superuser_reserved_connections_ratio > 20:
     print(Fore.YELLOW + "[WARN]\t {0} of connections are reserved for super user. This is too much and can limit other users connections".format(superuser_reserved_connections_ratio))
   else:
-    print(Fore.GREEN + "[INFO]\t {0} are reserved for super user connection {1}%".format(superuser_reserved_connections(),superuser_reserved_connections_ratio))
+    print(Fore.GREEN + "[INFO]\t {0} are reserved for super user connection ({1})%".format(superuser_reserved_connections(),superuser_reserved_connections_ratio))
 
 superuser_reserved_connections_ratio()
 
@@ -382,7 +375,7 @@ def work_mem():
 
 work_mem_total=convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100*max_connections();
 print(Fore.GREEN + "[INFO]\t configured work_mem {0}".format(work_mem()))
-print(Fore.GREEN + "[INFO]\t Using an average ratio of work_mem buffers by connection of {0}%".format(WORK_MEM_PER_CONNECTION_PERCENT))
+print(Fore.GREEN + "[INFO]\t Using an average ratio of work_mem buffers by connection of {0}% (require from WORK_MEM_PER_CONNECTION_PERCENT in script)".format(WORK_MEM_PER_CONNECTION_PERCENT))
 print(Fore.GREEN + "[INFO]\t total work_mem (per connection): {}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
 
 def shared_buffers():
@@ -664,7 +657,7 @@ else:
 
 print_advices()
 
-print(Fore.RESET)
+print(Fore.RESET, end='')
 
 cur.close()
 conn.close()
