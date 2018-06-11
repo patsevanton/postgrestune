@@ -48,10 +48,19 @@ priority_advice={}
 def add_advice(category, priority, advice):
   priority_advice[priority] = advice
   advices[category] = priority_advice
+
+def print_header_1(string):
+  print(Fore.WHITE + '===== ' + string + ' =====', end='')
+  print(Fore.RESET)
+
+def print_header_2(string):
+  print(Fore.WHITE + '----- ' + string + ' -----', end='')
+  print(Fore.RESET)
   
 def print_advices():
   for category,priority_advice in advices.iteritems():
-    print(Fore.WHITE + '-----  {}  -----'.format(category))
+    # print(Fore.WHITE + '-----  {}  -----'.format(category))
+    print_header_2(category);
     for priority,advice in priority_advice.iteritems():
       if priority == 'urgent':
         print(Fore.RED + priority,advice)
@@ -61,14 +70,6 @@ def print_advices():
         print(Fore.GREEN + priority,advice)
     print(Fore.RESET)
   print(Fore.RESET)  
-
-def print_header_1(string):
-  print(Fore.WHITE + '===== ' + string + ' =====', end='')
-  print(Fore.RESET)
-
-def print_header_2(string):
-  print(Fore.WHITE + '----- ' + string + ' -----', end='')
-  print(Fore.RESET)
 
 def print_report_bad(string):
   print(Fore.RED + "[BAD]:\t{}".format(string))
@@ -122,7 +123,8 @@ mem = psutil.virtual_memory()
 
 # Report
 # OS version
-print(Fore.WHITE   + "=====  OS information  =====")
+# print(Fore.WHITE   + "=====  OS information  =====")
+print_header_1('OS information')
 print(Fore.GREEN + '[INFO]\t linux_distribution  : ' + ' '.join(str(p) for p in platform.linux_distribution()))
 # OS Memory
 print(Fore.GREEN + '[INFO]\t OS total memory     : {0}'.format(format_bytes(mem.total)))
@@ -198,13 +200,15 @@ def check_overcommit_ratio():
 
 check_overcommit_ratio()
 
-print(Fore.WHITE + "=====  General instance informations  =====")
+# print(Fore.WHITE + "=====  General instance informations  =====")
+print_header_1('General instance informations')
 
 postgresql_current_version=select_one_value("SELECT version();")[0].split(' ')[1]
 POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_current_version)[0]
 
 ## Version
-print('-----  Version  -----')
+# print('-----  Version  -----')
+print_header_2('Version');
 def check_postgresql_version():
   # print(type(postgresql_version))
   # print(type(POSTGRESQL_VERSION_MAJOR_CURRENT))
@@ -233,7 +237,8 @@ def check_postgresql_version():
 POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
 
 ## Uptime
-print('-----  Uptime  -----')
+# print('-----  Uptime  -----')
+print_header_2('Uptime');
 
 def get_pid_postgresql(dir_pid = '/var/run/postgresql'):
   for file in os.listdir(dir_pid):
@@ -254,7 +259,8 @@ if timestamp_running_postgresql < 24*60*60:
     print(Fore.YELLOW + "[WARN]\t Uptime is less than 1 day. " + __file__ + " result may not be accurate")
 
 # ## Database count (except template)
-print('-----  Databases  -----')
+# print('-----  Databases  -----')
+print_header_2('Databases');
 
 def select_database():
   try:
@@ -267,7 +273,8 @@ def select_database():
   
 select_database()
 
-print(Fore.WHITE + "-----  Extensions  -----")
+# print(Fore.WHITE + "-----  Extensions  -----")
+print_header_2('Extensions');
 
 def select_extensions():
   try:
@@ -290,7 +297,8 @@ def check_pg_stat_statements():
 
 check_pg_stat_statements()
 
-print('-----  Users  -----')
+# print('-----  Users  -----')
+print_header_2('Users');
 
 def check_username_equal_password():
   try:
@@ -318,7 +326,8 @@ def password_encryption():
 
 password_encryption()
 
-print(Fore.WHITE + "-----  Connection information  -----")
+# print(Fore.WHITE + "-----  Connection information  -----")
+print_header_2('Connection information');
 
 def max_connections():
   return int(select_one_value("SELECT setting FROM pg_settings WHERE name = 'max_connections';")[0])
@@ -373,7 +382,8 @@ def check_average_connection_age(seconds):
 
 check_average_connection_age(average_connection_seconds)
 
-print(Fore.WHITE + "-----  Memory usage  -----")
+# print(Fore.WHITE + "-----  Memory usage  -----")
+print_header_2('Memory usage');
 
 def work_mem():
   try:
@@ -498,7 +508,8 @@ def log_min_duration_statement():
   return cur.fetchone()[0]
 
 ## Logs
-print(Fore.WHITE + '-----  Logs  ----')
+# print(Fore.WHITE + '-----  Logs  ----')
+print_header_2('Logs');
 
 if log_min_duration_statement() == '-1':
   print(Fore.YELLOW + "[WARN]\t log of long queries is desactivated. It will be more difficult to optimize query performances")
@@ -517,7 +528,8 @@ else:
   print(Fore.GREEN + "[INFO]\t log_statement = " + log_statement)
 
 ## Autovacuum
-print(Fore.WHITE + '-----  Autovacuum  -----')
+# print(Fore.WHITE + '-----  Autovacuum  -----')
+print_header_2('Autovacuum');
 
 if get_setting('autovacuum') == 'on':
   print(Fore.GREEN + "[INFO]\t autovacuum is activated")
