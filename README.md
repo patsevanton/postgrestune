@@ -1,5 +1,6 @@
 # postgrestune
 Python script to analyse your PostgreSQL database configuration, and give tuning advice
+This project is fork https://github.com/jfcoz/postgresqltuner rewrite to Python
 
 ### Install requirements: ###
 ```

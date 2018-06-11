@@ -59,7 +59,6 @@ def print_header_2(string):
   
 def print_advices():
   for category,priority_advice in advices.iteritems():
-    # print(Fore.WHITE + '-----  {}  -----'.format(category))
     print_header_2(category);
     for priority,advice in priority_advice.iteritems():
       if priority == 'urgent':
@@ -123,7 +122,6 @@ mem = psutil.virtual_memory()
 
 # Report
 # OS version
-# print(Fore.WHITE   + "=====  OS information  =====")
 print_header_1('OS information')
 print(Fore.GREEN + '[INFO]\t linux_distribution  : ' + ' '.join(str(p) for p in platform.linux_distribution()))
 # OS Memory
@@ -141,13 +139,6 @@ try:
 except IOError as e:
   print(Fore.RED + "Error {0}".format(e))
 cur = conn.cursor()
-
-# def cur_execute(sql_query):
-#   try:
-#    cur.execute(sql_query)
-#   except psycopg2.Error as e:
-#    print("Error {0}".format(e))
-#   return cur.fetchone()
 
 def select_one_value(sql_query):
   try:
@@ -200,19 +191,14 @@ def check_overcommit_ratio():
 
 check_overcommit_ratio()
 
-# print(Fore.WHITE + "=====  General instance informations  =====")
 print_header_1('General instance informations')
 
 postgresql_current_version=select_one_value("SELECT version();")[0].split(' ')[1]
 POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_current_version)[0]
 
 ## Version
-# print('-----  Version  -----')
 print_header_2('Version');
 def check_postgresql_version():
-  # print(type(postgresql_version))
-  # print(type(POSTGRESQL_VERSION_MAJOR_CURRENT))
-
   if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
     print(Fore.YELLOW + "[WARN]\t Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     print(Fore.YELLOW + "[INFO]\t You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
@@ -237,7 +223,6 @@ def check_postgresql_version():
 POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
 
 ## Uptime
-# print('-----  Uptime  -----')
 print_header_2('Uptime');
 
 def get_pid_postgresql(dir_pid = '/var/run/postgresql'):
@@ -259,7 +244,6 @@ if timestamp_running_postgresql < 24*60*60:
     print(Fore.YELLOW + "[WARN]\t Uptime is less than 1 day. " + __file__ + " result may not be accurate")
 
 # ## Database count (except template)
-# print('-----  Databases  -----')
 print_header_2('Databases');
 
 def select_database():
@@ -273,7 +257,6 @@ def select_database():
   
 select_database()
 
-# print(Fore.WHITE + "-----  Extensions  -----")
 print_header_2('Extensions');
 
 def select_extensions():
@@ -326,7 +309,6 @@ def password_encryption():
 
 password_encryption()
 
-# print(Fore.WHITE + "-----  Connection information  -----")
 print_header_2('Connection information');
 
 def max_connections():
@@ -382,7 +364,6 @@ def check_average_connection_age(seconds):
 
 check_average_connection_age(average_connection_seconds)
 
-# print(Fore.WHITE + "-----  Memory usage  -----")
 print_header_2('Memory usage');
 
 def work_mem():
@@ -508,7 +489,6 @@ def log_min_duration_statement():
   return cur.fetchone()[0]
 
 ## Logs
-# print(Fore.WHITE + '-----  Logs  ----')
 print_header_2('Logs');
 
 if log_min_duration_statement() == '-1':
@@ -528,7 +508,6 @@ else:
   print(Fore.GREEN + "[INFO]\t log_statement = " + log_statement)
 
 ## Autovacuum
-# print(Fore.WHITE + '-----  Autovacuum  -----')
 print_header_2('Autovacuum');
 
 if get_setting('autovacuum') == 'on':
