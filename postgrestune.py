@@ -157,10 +157,11 @@ def get_value_proc(path_of_proc):
       print(Fore.RED + '[ERROR]\t %s' % e)
 
 parser = argparse.ArgumentParser(description="postgrestune")
+parser.add_argument('-p', '--port', type=int)
+parser.add_argument('-d', '--database', default='template1')
 parser.add_argument('--host')
-parser.add_argument('--port')
-parser.add_argument('--database', default='template1')
-parser.add_argument('--username', default='postgres')
+parser.add_argument('-U', '--username', default='postgres')
+parser.add_argument('-W', '--password')
 args = parser.parse_args()
 
 try:
@@ -171,6 +172,7 @@ try:
         database = args.database,
         user = args.username,
         host = args.host,
+        password = args.password,
       )
     else:
       print("Connecting to {0}:{1} database {2} with user {3}...".format(args.host, args.port, args.database, args.username))
@@ -178,7 +180,8 @@ try:
         database = args.database,
         user = args.username,
         host = args.host,
-        port = args.port
+        port = args.port,
+        password = args.password,
       )
   else:
     print("Connecting to {0} database {1} with user {2}...".format('unix socket', args.database, args.username))
