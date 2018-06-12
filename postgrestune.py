@@ -156,7 +156,7 @@ def get_value_proc(path_of_proc):
     except IOError as e:
       print(Fore.RED + '[ERROR]\t %s' % e)
 
-parser = argparse.ArgumentParser(description="Example of a single flag acting as a boolean and an option.")
+parser = argparse.ArgumentParser(description="postgrestune")
 parser.add_argument('--host')
 parser.add_argument('--port')
 parser.add_argument('--database', default='template1')
@@ -179,13 +179,13 @@ try:
         user = args.username,
         host = args.host,
         port = args.port
-      )    
+      )
   else:
     print("Connecting to {0} database {1} with user {2}...".format('unix socket', args.database, args.username))
     conn = psycopg2.connect(
       database = args.database,
       user = args.username,
-    )    
+    )
 except IOError as e:
   print(Fore.RED + "Error {0}".format(e))
 cur = conn.cursor()
