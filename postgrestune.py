@@ -14,12 +14,6 @@ from __future__ import print_function
 # apt-get install python-packaging or yum install python-packaging
 # apt-get install python-colorama or yum install python-colorama
 
-### Connection variable ###
-HOST=None
-USERNAME=None
-PASSWORD=None
-DATABASE=None
-PORT=None
 ### PostgreSQL major and minor verion: ###
 POSTGRESQL_VERSION_MAJOR_CURRENT=None
 POSTGRESQL_VERSION_MAJOR_LATEST='10'
@@ -54,6 +48,7 @@ import os
 import datetime
 from colorama import Fore
 import time
+import argparse
 
 advices={}
 
@@ -161,13 +156,36 @@ def get_value_proc(path_of_proc):
     except IOError as e:
       print(Fore.RED + '[ERROR]\t %s' % e)
 
-print("Connecting to {0}:{1} database {2} with user {3}...".format(HOST, PORT, DATABASE, USERNAME))
+parser = argparse.ArgumentParser(description="Example of a single flag acting as a boolean and an option.")
+parser.add_argument('--host')
+parser.add_argument('--port')
+parser.add_argument('--database', default='template1')
+parser.add_argument('--username', default='postgres')
+args = parser.parse_args()
 
 try:
-  conn=psycopg2.connect(
-    database="postgres",
-    user="postgres",
-  )
+  if args.host:
+    if args.port:
+      print("Connecting to {0}:{1} database {2} with user {3}...".format(args.host, args.port, args.database, args.username))
+      conn = psycopg2.connect(
+        database = args.database,
+        user = args.username,
+        host = args.host,
+      )
+    else:
+      print("Connecting to {0}:{1} database {2} with user {3}...".format(args.host, args.port, args.database, args.username))
+      conn = psycopg2.connect(
+        database = args.database,
+        user = args.username,
+        host = args.host,
+        port = args.port
+      )    
+  else:
+    print("Connecting to {0} database {1} with user {2}...".format('unix socket', args.database, args.username))
+    conn = psycopg2.connect(
+      database = args.database,
+      user = args.username,
+    )    
 except IOError as e:
   print(Fore.RED + "Error {0}".format(e))
 cur = conn.cursor()
@@ -581,18 +599,18 @@ def costs_settings():
 costs_settings()
 
 # Database information
-print_header_1("Database information for database $database");
+print_header_1("Database information for database {}".format(args.database));
 
 ## Database size
 print_header_2("Database size");
 sum_total_relation_size=int(select_one_value("select sum(pg_total_relation_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
-print_report_info("Database $database total size : {}".format(format_bytes(sum_total_relation_size)))
+print_report_info("Database {0} total size : {1}".format(args.database,format_bytes(sum_total_relation_size)))
 sum_table_size=int(select_one_value("select sum(pg_table_size(schemaname||'.'||quote_ident(tablename))) from pg_tables")[0])
 sum_index_size=sum_total_relation_size-sum_table_size
 table_percent=sum_table_size*100/sum_total_relation_size
 index_percent=sum_index_size*100/sum_total_relation_size
-print_report_info("Database $database tables size : {0} ({1}%)".format(format_bytes(sum_table_size), table_percent))
-print_report_info("Database $database indexes size : {0} ({1}%)".format(format_bytes(sum_index_size), index_percent))
+print_report_info("Database {0} tables size : {1} ({2}%)".format(args.database,format_bytes(sum_table_size), table_percent))
+print_report_info("Database {0} indexes size : {1} ({2}%)".format(args.database,format_bytes(sum_index_size), index_percent))
 
 ## Tablespace location
 print_header_2("Tablespace location");
