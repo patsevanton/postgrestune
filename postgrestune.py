@@ -14,6 +14,12 @@ from __future__ import print_function
 # apt-get install python-packaging or yum install python-packaging
 # apt-get install python-colorama or yum install python-colorama
 
+### Connection variable ###
+HOST=None
+USERNAME=None
+PASSWORD=None
+DATABASE=None
+PORT=None
 ### PostgreSQL major and minor verion: ###
 POSTGRESQL_VERSION_MAJOR_CURRENT=None
 POSTGRESQL_VERSION_MAJOR_LATEST='10'
@@ -23,6 +29,7 @@ POSTGRESQL_VERSION_MINOR_LATEST_95='9.5.13'
 POSTGRESQL_VERSION_MINOR_LATEST_94='9.4.18'
 POSTGRESQL_VERSION_MINOR_LATEST_93='9.3.23'
 WORK_MEM_PER_CONNECTION_PERCENT=150
+
 
 import imp
 def find_module(*modules):
@@ -153,6 +160,8 @@ def get_value_proc(path_of_proc):
         return(value_proc)
     except IOError as e:
       print(Fore.RED + '[ERROR]\t %s' % e)
+
+print("Connecting to {0}:{1} database {2} with user {3}...".format(HOST, PORT, DATABASE, USERNAME))
 
 try:
   conn=psycopg2.connect(
