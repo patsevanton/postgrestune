@@ -125,28 +125,6 @@ def format_bytes(bytes_num):
             bytes_num = bytes_num / 1024
     return str(round(dblbyte, 2)) + " " + sizes[i]
 
-mem = psutil.virtual_memory()
-
-# Report
-# OS version
-print_header_1('OS information')
-print(Fore.GREEN + '[INFO]\t linux_distribution  : ' + ' '.join(str(p) for p in platform.linux_distribution()))
-# OS Memory
-print(Fore.GREEN + '[INFO]\t OS total memory     : {0}'.format(format_bytes(mem.total)))
-print(Fore.BLUE  + '[INFO]\t node                : {0}'.format(platform.node()))
-print(Fore.GREEN + '[INFO]\t release             : {0}'.format(platform.release()))
-print(Fore.BLUE  + '[INFO]\t machine             : {0}'.format(platform.machine()))
-print(Fore.BLUE  + '[INFO]\t processor           : {0}'.format(platform.processor()))
-
-try:
-  conn=psycopg2.connect(
-    database="postgres",
-    user="postgres",
-  )
-except IOError as e:
-  print(Fore.RED + "Error {0}".format(e))
-cur = conn.cursor()
-
 def select_one_value(sql_query):
   try:
    cur.execute(sql_query)
@@ -175,6 +153,28 @@ def get_value_proc(path_of_proc):
         return(value_proc)
     except IOError as e:
       print(Fore.RED + '[ERROR]\t %s' % e)
+
+try:
+  conn=psycopg2.connect(
+    database="postgres",
+    user="postgres",
+  )
+except IOError as e:
+  print(Fore.RED + "Error {0}".format(e))
+cur = conn.cursor()
+
+mem = psutil.virtual_memory()
+
+# Report
+# OS version
+print_header_1('OS information')
+print(Fore.GREEN + '[INFO]\t linux_distribution  : ' + ' '.join(str(p) for p in platform.linux_distribution()))
+# OS Memory
+print(Fore.GREEN + '[INFO]\t OS total memory     : {0}'.format(format_bytes(mem.total)))
+print(Fore.BLUE  + '[INFO]\t node                : {0}'.format(platform.node()))
+print(Fore.GREEN + '[INFO]\t release             : {0}'.format(platform.release()))
+print(Fore.BLUE  + '[INFO]\t machine             : {0}'.format(platform.machine()))
+print(Fore.BLUE  + '[INFO]\t processor           : {0}'.format(platform.processor()))
 
 # Overcommit
 def check_overcommit_memory():
