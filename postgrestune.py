@@ -32,7 +32,7 @@ def find_module(*modules):
         imp.find_module(module)
     except ImportError:
         print('Not found {0} module.'.format(module))
-        print('Run command sudo apt-get install python-{0} or sudo yum install python2-{0}'.format(module))
+        print('Run command sudo apt-get install python-{0} or sudo yum install python-{0}'.format(module))
         exit(1)
 
 find_module('psutil', 'psycopg2', 'packaging', 'colorama')
