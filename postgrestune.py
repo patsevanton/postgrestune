@@ -604,7 +604,7 @@ def costs_settings():
    print(Fore.RED + "Error {0}".format(e))
   if cur != None:
     ModifiedCosts = [i[0] for i in cur.fetchall()]
-    if ModifiedCosts > 0:
+    if len(ModifiedCosts) > 0:
       print_report_warn("some costs settings are not the defaults : " + ', '.join(str(p) for p in ModifiedCosts) + ". This can have bad impacts on performance. Use at your own risks")
     else:
       print_report_ok("costs settings are defaults")
