@@ -24,18 +24,27 @@ POSTGRESQL_VERSION_MINOR_LATEST_94='9.4.18'
 POSTGRESQL_VERSION_MINOR_LATEST_93='9.3.23'
 WORK_MEM_PER_CONNECTION_PERCENT=150
 
-
 import imp
-def find_module(*modules):
-  for module in modules:
-    try:
-        imp.find_module(module)
-    except ImportError:
-        print('Not found {0} module.'.format(module))
-        print('Run command sudo apt-get install python-{0} or sudo yum install python-{0}'.format(module))
-        exit(1)
+try:
+  imp.find_module('psycopg2')
+except ImportError:
+  print('Not found {0} module.'.format('python-psycopg2'))
+  print('Run command sudo apt-get install {0} or sudo yum install {0}'.format('python-psycopg2'))
+  exit(1)
 
-find_module('psutil', 'psycopg2', 'packaging', 'colorama')
+try:
+  imp.find_module('colorama')
+except ImportError:
+  print('Not found {0} module.'.format('python-colorama'))
+  print('Run command sudo apt-get install {0} or sudo yum install {0}'.format('python-colorama'))
+  exit(1)
+
+try:
+  imp.find_module('pkg_resources')
+except ImportError:
+  print('Not found {0} module.'.format('python-setuptools'))
+  print('Run command sudo apt-get install {0} or sudo yum install {0}'.format('python-setuptools'))
+  exit(1)
 
 #### Import modules: ####
 import psutil
@@ -43,12 +52,13 @@ import platform
 import re
 import subprocess
 import psycopg2
-from packaging import version
+#from packaging import version
 import os
 import datetime
 from colorama import Fore
 import time
 import argparse
+from pkg_resources import parse_version
 
 advices={}
 
@@ -95,12 +105,12 @@ def print_advices():
   print(Fore.RESET, end='')  
 
 def min_version(min_version):
-  if version.parse(postgresql_current_version) < version.parse(min_version):
-    # print('{0} < {1}'.format(version.parse(postgresql_current_version), version.parse(min_version)))
+  if parse_version(postgresql_current_version) < parse_version(min_version):
+    # print('{0} < {1}'.format(parse_version(postgresql_current_version), parse_version(min_version)))
     # print('postgresql_current_version < min_version')
     return 0
   else:
-    # print('{0} > {1}'.format(version.parse(postgresql_current_version), version.parse(min_version)))
+    # print('{0} > {1}'.format(parse_version(postgresql_current_version), parse_version(min_version)))
     # print('postgresql_current_version > min_version')
     return 1
 
@@ -231,24 +241,24 @@ POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_
 ## Version
 print_header_2('Version');
 def check_postgresql_version():
-  if version.parse(POSTGRESQL_VERSION_MAJOR_CURRENT) < version.parse(POSTGRESQL_VERSION_MAJOR_LATEST):
+  if parse_version(POSTGRESQL_VERSION_MAJOR_CURRENT) < parse_version(POSTGRESQL_VERSION_MAJOR_LATEST):
     print(Fore.YELLOW + "[WARN]\t Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     print(Fore.YELLOW + "[INFO]\t You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if POSTGRESQL_VERSION_MAJOR_CURRENT == '9.6':
-      if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_96):
+      if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_96):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.5':
-      if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_95):
+      if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_95):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.4':
-      if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_94):
+      if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_94):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.3':
-      if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_93):
+      if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_93):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   else:
     print(Fore.GREEN + "[OK]\t You are using last postgresql version {}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
-    if version.parse(postgresql_current_version) < version.parse(POSTGRESQL_VERSION_MINOR_LATEST_10):
+    if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_10):
       print(Fore.RED + "[WARN]\t You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
   return POSTGRESQL_VERSION_MAJOR_CURRENT
 
