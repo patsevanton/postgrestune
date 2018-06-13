@@ -621,7 +621,7 @@ if (min_version('9.2')):
   cur.execute("select spcname,pg_tablespace_location(oid) from pg_tablespace where pg_tablespace_location(oid) like (select setting from pg_settings where name='data_directory')||'/%';")
   list_tablespace_in_data_dir = cur.fetchall()
   dict_tablespace_in_data_dir = dict((y, x) for x, y in list_tablespace_in_data_dir)
-  if list_tablespace_in_data_dir == 0:
+  if len(list_tablespace_in_data_dir) == 0:
     print_report_ok("No tablespace in PGDATA");
   else:
     print_report_bad("Some tablespaces are in PGDATA : " + ', '.join(path_tablespace for path_tablespace in dict_tablespace_in_data_dir))
