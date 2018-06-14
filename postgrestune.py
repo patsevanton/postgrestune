@@ -265,7 +265,7 @@ POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
 ## Uptime
 print_header_2('Uptime');
 
-def get_pid_postgresql(d):
+def get_pid_postgresql():
   for proc in psutil.process_iter():
     if proc.name() == 'postgres':
       if '-D' in proc.cmdline():
