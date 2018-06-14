@@ -1,5 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
+import subprocess
+import re
 
 def get_value_proc(path_of_proc):
     try:

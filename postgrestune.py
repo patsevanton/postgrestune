@@ -11,7 +11,6 @@ from __future__ import print_function
 # apt-get install python-psutil or yum install python2-psutil
 # apt-get install python-pip or yum install python2-pip
 # apt-get install python-psycopg2 or yum install python-psycopg2
-# apt-get install python-packaging or yum install python-packaging
 # apt-get install python-colorama or yum install python-colorama
 
 ### PostgreSQL major and minor verion: ###
@@ -52,7 +51,6 @@ import platform
 import re
 import subprocess
 import psycopg2
-#from packaging import version
 import os
 import datetime
 from colorama import Fore
@@ -267,12 +265,12 @@ POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
 ## Uptime
 print_header_2('Uptime');
 
-def get_pid_postgresql(dir_pid = '/var/run/postgresql'):
-  for file in os.listdir(dir_pid):
-    if file.endswith(".pid"):
-      file_pid = os.path.join(dir_pid, file)
-      with open(file_pid) as f:
-        return int(next(f))
+def get_pid_postgresql(d):
+  for proc in psutil.process_iter():
+    if proc.name() == 'postgres':
+      if '-D' in proc.cmdline():
+        return proc._pid
+
 
 def get_time_running_pid(pid):            
   p = psutil.Process(pid)
