@@ -57,6 +57,7 @@ from colorama import Fore
 import time
 import argparse
 from pkg_resources import parse_version
+import sys
 
 advices={}
 
@@ -74,19 +75,19 @@ def print_header_2(string):
   print(Fore.RESET)
 
 def print_report_ok(string):
-  print(Fore.GREEN + "[OK]:\t{}".format(string))
+  print(Fore.GREEN + "[OK]:\t{0}".format(string))
 
 def print_report_warn(string):
-  print(Fore.YELLOW + "[WARN]:\t{}".format(string))
+  print(Fore.YELLOW + "[WARN]:\t{0}".format(string))
 
 def print_report_bad(string):
-  print(Fore.RED + "[BAD]:\t{}".format(string))
+  print(Fore.RED + "[BAD]:\t{0}".format(string))
 
 def print_report_info(string):
-  print(Fore.WHITE + "[INFO]:\t{}".format(string))
+  print(Fore.WHITE + "[INFO]:\t{0}".format(string))
 
 def print_report_unknown(string):
-  print(Fore.CYAN + "[INFO]:\t{}".format(string))
+  print(Fore.CYAN + "[INFO]:\t{0}".format(string))
   
 def print_advices():
   print_header_1("Configuration advices");
@@ -113,16 +114,17 @@ def min_version(min_version):
     return 1
 
 def convert_to_byte(size):
+  size = size.lower()
   size_byte=None
-  if re.search('gb', size, re.IGNORECASE):
-    size_mb = int(re.sub(r'gb', '', size, flags=re.IGNORECASE))*1024
+  if re.search('gb', size):
+    size_mb = int(re.sub(r'gb', '', size))*1024
     size_kb = size_mb*1024
     size_byte = size_kb*1024
-  elif re.search('mb', size, re.IGNORECASE):
-    size_kb = int(re.sub(r'mb', '', size, flags=re.IGNORECASE))*1024
+  elif re.search('mb', size):
+    size_kb = int(re.sub(r'mb', '', size))*1024
     size_byte = size_kb*1024
-  elif re.search('kb', size, re.IGNORECASE):
-    size_byte = int(re.sub(r'kb', '', size, flags=re.IGNORECASE))*1024
+  elif re.search('kb', size):
+    size_byte = int(re.sub(r'kb', '', size))*1024
   return size_byte
 
 def format_bytes(bytes_num):
@@ -166,7 +168,7 @@ def get_value_proc(path_of_proc):
 
 parser = argparse.ArgumentParser(description="postgrestune")
 parser.add_argument('-p', '--port', type=int)
-parser.add_argument('-d', '--database', default='template1')
+parser.add_argument('-d', '--database', default='postgres')
 parser.add_argument('--host')
 parser.add_argument('-U', '--username', default='postgres')
 parser.add_argument('-W', '--password')
@@ -221,9 +223,9 @@ def check_overcommit_memory():
     print_report_bad("Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
     add_advice('sysctl','urgent','set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. This will disable memory overcommitment and avoid postgresql killed by OOM killer.')
     overcommit_ratio = int(get_value_proc('/proc/sys/vm/overcommit_ratio'))
-    print_report_info("sysctl vm.overcommit_ratio={}".format(overcommit_ratio))
+    print_report_info("sysctl vm.overcommit_ratio={0}".format(overcommit_ratio))
     if overcommit_ratio <= 50:
-      print_report_bad("vm.overcommit_ratio is too small, you will not be able to use more than {}*RAM+SWAP for applications".format(overcommit_ratio))
+      print_report_bad("vm.overcommit_ratio is too small, you will not be able to use more than {0}*RAM+SWAP for applications".format(overcommit_ratio))
     elif overcommit_ratio > 90:
       print_report_bad("vm.overcommit_ratio is too high, you need to keep free space for the kernel")
   else:
@@ -255,7 +257,7 @@ def check_postgresql_version():
       if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_93):
         print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   else:
-    print(Fore.GREEN + "[OK]\t You are using last postgresql version {}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
+    print(Fore.GREEN + "[OK]\t You are using last postgresql version {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_10):
       print(Fore.RED + "[WARN]\t You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
   return POSTGRESQL_VERSION_MAJOR_CURRENT
@@ -267,14 +269,25 @@ print_header_2('Uptime');
 
 def get_pid_postgresql():
   for proc in psutil.process_iter():
-    if proc.name() == 'postgres':
-      if '-D' in proc.cmdline():
-        return proc._pid
+    if sys.version_info < (2, 7):
+      if proc.name == 'postgres' or proc.name == 'postmaster':
+        # print('proc.name', proc.name)
+        if '-D' in proc.cmdline:
+          print('type(proc._pid)',type(proc._pid))
+          return int(proc._pid)
+    else:
+      if proc.name() == 'postgres' or proc.name() == 'postmaster':
+        # print('proc.name', proc.name())
+        if '-D' in proc.cmdline():
+          print('type(proc._pid)',type(proc._pid))
+          return int(proc._pid)
 
-
-def get_time_running_pid(pid):            
+def get_time_running_pid(pid):
   p = psutil.Process(pid)
-  return time.time() - p.create_time()
+  if sys.version_info < (2, 7):
+    return time.time() - p.create_time
+  else:
+    return time.time() - p.create_time()
 
 pid_postgresql = get_pid_postgresql()
 timestamp_running_postgresql = get_time_running_pid(pid_postgresql)
@@ -292,7 +305,7 @@ def select_database():
   except psycopg2.Error as e:
    print(Fore.RED + "Error {0}".format(e))
   list_databases = [i[0] for i in cur.fetchall()]
-  print(Fore.GREEN + '[INFO]\t Database count (except templates): {}'.format(len(list_databases)))
+  print(Fore.GREEN + '[INFO]\t Database count (except templates): {0}'.format(len(list_databases)))
   print(Fore.GREEN + '[INFO]\t Database list (except templates): ' + ', '.join(str(p) for p in list_databases))
   
 select_database()
@@ -305,7 +318,7 @@ def select_extensions():
   except psycopg2.Error as e:
    print(Fore.RED + "Error {0}".format(e))
   list_extensions = [i[0] for i in cur.fetchall()]
-  print(Fore.GREEN + '[INFO]\t Number of activated extensions : {}'.format(len(list_extensions)))
+  print(Fore.GREEN + '[INFO]\t Number of activated extensions : {0}'.format(len(list_extensions)))
   print(Fore.GREEN + '[INFO]\t Activated extensions : ' + ', '.join(str(p) for p in list_extensions))
   
 select_extensions()
@@ -352,14 +365,14 @@ print_header_2('Connection information');
 def max_connections():
   return int(select_one_value("SELECT setting FROM pg_settings WHERE name = 'max_connections';")[0])
 
-print(Fore.BLUE + "[INFO]\t max_connections: {}".format(max_connections()))
+print(Fore.BLUE + "[INFO]\t max_connections: {0}".format(max_connections()))
 
 def current_connections():
   return int(select_one_value("SELECT count(*) FROM pg_stat_activity;")[0])
 
 current_connections_percent=current_connections()*100/max_connections()
 
-print(Fore.BLUE + "[INFO]\t current used connections: {} ({}%)".format(current_connections(),current_connections_percent))
+print(Fore.BLUE + "[INFO]\t current used connections: {0} ({1}%)".format(current_connections(),current_connections_percent))
 
 def check_current_connections_percent():
   if current_connections_percent > 90:
@@ -394,7 +407,7 @@ average_connection_seconds=average_connection_age()
 
 def check_average_connection_age(seconds):
   h,m,s = convert_time(average_connection_age())
-  print(Fore.GREEN + '[INFO]\t Average connection age : {:2.0f}h {:2.0f}m {:2.0f}s'.format(h,m,s))
+  print(Fore.GREEN + '[INFO]\t Average connection age : {0:2.0f}h {1:2.0f}m {2:2.0f}s'.format(h,m,s))
   if seconds < 60:
     print(Fore.RED + "[WARN]\t Average connection age is less than 1 minute. Use a connection pooler to limit new connection/seconds")
   elif seconds < 600:
@@ -414,7 +427,7 @@ def work_mem():
 work_mem_total=convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100*max_connections();
 print(Fore.GREEN + "[INFO]\t configured work_mem {0}".format(work_mem()))
 print(Fore.GREEN + "[INFO]\t Using an average ratio of work_mem buffers by connection of {0}% (require from WORK_MEM_PER_CONNECTION_PERCENT in script)".format(WORK_MEM_PER_CONNECTION_PERCENT))
-print(Fore.GREEN + "[INFO]\t total work_mem (per connection): {}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
+print(Fore.GREEN + "[INFO]\t total work_mem (per connection): {0}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
 
 def shared_buffers():
   try:
@@ -423,7 +436,7 @@ def shared_buffers():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "[INFO]\t shared_buffers: {}".format(shared_buffers()));
+print(Fore.GREEN + "[INFO]\t shared_buffers: {0}".format(shared_buffers()));
 
 def autovacuum_max_workers():
   return int(select_one_value("show autovacuum_max_workers;")[0])
@@ -453,9 +466,9 @@ def maintenance_work_mem():
 maintenance_work_mem_total = convert_to_byte(maintenance_work_mem()) * autovacuum_max_workers()
 
 if convert_to_byte(maintenance_work_mem()) <= 64*1024*1024:
-  print(Fore.YELLOW + "[WARN]\t maintenance_work_mem {} is less or equal default value. Increase it to reduce maintenance tasks time".format(maintenance_work_mem()))
+  print(Fore.YELLOW + "[WARN]\t maintenance_work_mem {0} is less or equal default value. Increase it to reduce maintenance tasks time".format(maintenance_work_mem()))
 else:
-  print(Fore.GREEN + "[INFO]\t maintenance_work_mem = {}".format(maintenance_work_mem()))
+  print(Fore.GREEN + "[INFO]\t maintenance_work_mem = {0}".format(maintenance_work_mem()))
 
 max_memory=convert_to_byte(shared_buffers())+work_mem_total+maintenance_work_mem_total+track_activity_size
 
@@ -463,7 +476,7 @@ temp_variable1 = max_connections()*convert_to_byte(work_mem())*WORK_MEM_PER_CONN
 temp_variable2 = format_bytes(autovacuum_max_workers() * convert_to_byte(maintenance_work_mem()))
 
 print(Fore.WHITE + "\t\t Max memory usage:")
-print(Fore.WHITE + "\t\t shared_buffers ({})".format(shared_buffers()))
+print(Fore.WHITE + "\t\t shared_buffers ({0})".format(shared_buffers()))
 print(Fore.WHITE + "\t\t + max_connections * work_mem * average_work_mem_buffers_per_connection ", end='')
 print(Fore.WHITE + "({0}*{1}*{2}/100 = {3})".format(max_connections(),
   format_bytes(convert_to_byte(work_mem())),WORK_MEM_PER_CONNECTION_PERCENT,format_bytes(temp_variable1)))
@@ -479,7 +492,7 @@ def effective_cache_size():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "[INFO]\t effective_cache_size: {}".format(effective_cache_size()));
+print(Fore.GREEN + "[INFO]\t effective_cache_size: {0}".format(effective_cache_size()));
 
 def all_databases_size():
   try:
@@ -488,7 +501,7 @@ def all_databases_size():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "[INFO]\t Size of all databases : {}".format(format_bytes(int(all_databases_size()))))
+print(Fore.GREEN + "[INFO]\t Size of all databases : {0}".format(format_bytes(int(all_databases_size()))))
 
 shared_buffers_usage = int(all_databases_size())/convert_to_byte(shared_buffers())
 if shared_buffers_usage < 0.7:
@@ -559,18 +572,18 @@ else:
 print_header_2("Checkpoint")
 checkpoint_completion_target=float(get_setting('checkpoint_completion_target'))
 if checkpoint_completion_target < 0.5:
-  print_report_bad("checkpoint_completion_target ({}) is lower than default (0.5)".format(checkpoint_completion_target))
+  print_report_bad("checkpoint_completion_target ({0}) is lower than default (0.5)".format(checkpoint_completion_target))
   add_advice("checkpoint","urgent","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
 elif checkpoint_completion_target >= 0.5 and checkpoint_completion_target <= 0.7:
-  print_report_warn("checkpoint_completion_target ({}) is low".format(checkpoint_completion_target))
+  print_report_warn("checkpoint_completion_target ({0}) is low".format(checkpoint_completion_target))
   add_advice("checkpoint","medium","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
 elif checkpoint_completion_target >= 0.7 and checkpoint_completion_target <= 0.9:
-  print_report_ok("checkpoint_completion_target ({}) OK".format(checkpoint_completion_target))
+  print_report_ok("checkpoint_completion_target ({0}) OK".format(checkpoint_completion_target))
 elif checkpoint_completion_target > 0.9 and checkpoint_completion_target < 1:
-  print_report_warn("checkpoint_completion_target ({}) is too near to 1".format(checkpoint_completion_target))
+  print_report_warn("checkpoint_completion_target ({0}) is too near to 1".format(checkpoint_completion_target))
   add_advice("checkpoint","medium","Your checkpoint completion target is too high. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
 else:
-  print_report_bad("checkpoint_completion_target too high ({})".format(checkpoint_completion_target))
+  print_report_bad("checkpoint_completion_target too high ({0})".format(checkpoint_completion_target))
 
 ## Disk access
 print_header_2("Disk access")
@@ -610,7 +623,7 @@ def costs_settings():
 costs_settings()
 
 # Database information
-print_header_1("Database information for database {}".format(args.database));
+print_header_1("Database information for database {0}".format(args.database));
 
 ## Database size
 print_header_2("Database size");
