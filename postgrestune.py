@@ -271,15 +271,11 @@ def get_pid_postgresql():
   for proc in psutil.process_iter():
     if sys.version_info < (2, 7):
       if proc.name == 'postgres' or proc.name == 'postmaster':
-        # print('proc.name', proc.name)
         if '-D' in proc.cmdline:
-          print('type(proc._pid)',type(proc._pid))
           return int(proc._pid)
     else:
       if proc.name() == 'postgres' or proc.name() == 'postmaster':
-        # print('proc.name', proc.name())
         if '-D' in proc.cmdline():
-          print('type(proc._pid)',type(proc._pid))
           return int(proc._pid)
 
 def get_time_running_pid(pid):
@@ -712,3 +708,47 @@ print(Fore.RESET, end='')
 
 cur.close()
 conn.close()
+
+# Check CPU times
+cpu_user_percent_list = []
+cpu_nice_percent_list = []
+cpu_system_percent_list = []
+cpu_idle_percent_list = []
+cpu_iowait_percent_list = []
+cpu_irq_percent_list = []
+cpu_softirq_percent_list = []
+
+for i in range(10):
+  sum_cpu_times = psutil.cpu_times().user + psutil.cpu_times().nice + psutil.cpu_times().system + psutil.cpu_times().idle + psutil.cpu_times().iowait + psutil.cpu_times().irq + psutil.cpu_times().softirq + psutil.cpu_times().steal + psutil.cpu_times().guest + psutil.cpu_times().guest_nice
+  cpu_user_percent_list.append(psutil.cpu_times().user*100/sum_cpu_times)
+  cpu_nice_percent_list.append(psutil.cpu_times().nice*100/sum_cpu_times)
+  cpu_system_percent_list.append(psutil.cpu_times().system*100/sum_cpu_times)
+  cpu_idle_percent_list.append(psutil.cpu_times().idle*100/sum_cpu_times)
+  cpu_iowait_percent_list.append(psutil.cpu_times().iowait*100/sum_cpu_times)
+  cpu_irq_percent_list.append(psutil.cpu_times().irq*100/sum_cpu_times)
+  cpu_softirq_percent_list.append(psutil.cpu_times().softirq*100/sum_cpu_times)
+
+
+cpu_user_percent_avg = reduce(lambda x, y: x + y, cpu_user_percent_list) / len(cpu_user_percent_list)
+cpu_nice_percent_avg = reduce(lambda x, y: x + y, cpu_nice_percent_list) / len(cpu_nice_percent_list)
+cpu_system_percent_avg = reduce(lambda x, y: x + y, cpu_system_percent_list) / len(cpu_system_percent_list)
+cpu_idle_percent_avg = reduce(lambda x, y: x + y, cpu_idle_percent_list) / len(cpu_idle_percent_list)
+cpu_iowait_percent_avg = reduce(lambda x, y: x + y, cpu_iowait_percent_list) / len(cpu_iowait_percent_list)
+cpu_irq_percent_avg = reduce(lambda x, y: x + y, cpu_irq_percent_list) / len(cpu_irq_percent_list)
+cpu_softirq_percent_avg = reduce(lambda x, y: x + y, cpu_softirq_percent_list) / len(cpu_softirq_percent_list)
+
+if (cpu_user_percent_avg + cpu_nice_percent_avg) > 80:
+  print("When the CPU user time usage is above 80%, the user may experience lag. Such high CPU usage indicates insufficient processing power. Either the CPU needs to be upgraded")
+
+if cpu_system_percent_avg > 50:
+  print("Warning: Try upgrade/reinstall system, upgrade kernel, check logs, dmesg. If the problem exists in kernel, you should narrow down a problem using a profiler such as OProfile or perf.")
+
+if cpu_iowait_percent_avg > 30:
+  print("the processes in state 'D' drive up the load average and are in iowait. Active swapping could do that; so could a bad disk or a hung NFS mount. You should reduce your memory footprint or add RAM, so you swap less. You should also check for bad disks & wires.")
+
+if cpu_irq_percent_avg > 15:
+  print("Find CPU with high IRQ using mpstat -P ALL. Check /proc/interrupts on this CPU. Check dmesg this kernel module. Advice: 1) disabling the software that uses that card, and see if the interrupts decrease. 2) removing that card from the system, and unloading the driver, and see if there's improvement. 3) move that card to another slot and see if that helps. 4) check for updated drivers or patches for the software.")
+
+if cpu_softirq_percent_avg > 10:
+  print("Try use https://github.com/strizhechenko/netutils-linux - A suite of utilities simplilfying linux networking stack performance troubleshooting and tuning.")
+
