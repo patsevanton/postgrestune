@@ -233,6 +233,19 @@ def check_overcommit_memory():
 
 check_overcommit_memory()
 
+
+# Scheduler
+def sched_migration_cost_ns():
+  sched_migration_cost_ns = int(get_value_proc('/proc/sys/kernel/sched_migration_cost_ns'))
+  if sched_migration_cost_ns:
+    if 4000000 <= sched_migration_cost_ns <= 6000000:
+      print_report_ok("/proc/sys/kernel/sched_migration_cost_ns is good: {0}".format(sched_migration_cost_ns))
+    else:
+      print_report_warn("/proc/sys/kernel/sched_migration_cost_ns is warn: {0}".format(sched_migration_cost_ns))
+      add_advice("sysctl","medium","The migration cost should be increased, almost universally on server systems with many processes. Good setting of 5ms (5000000 ns) instead default.")
+
+sched_migration_cost_ns()
+
 print_header_1('General instance informations')
 
 postgresql_current_version=select_one_value("SELECT version();")[0].split(' ')[1]
@@ -442,28 +455,28 @@ def kernel_shmmax():
   page_size = os.sysconf('SC_PAGE_SIZE')
   phys_pages = os.sysconf('SC_PHYS_PAGES')
   kernel_shmall = phys_pages/2
-  print('Maximum number of shared memory segments in pages:')
-  print('kernel_shmall = {0}'.format(kernel_shmall))
+  # print('Maximum number of shared memory segments in pages:')
+  # print('kernel_shmall = {0}'.format(kernel_shmall))
   current_kernel_shmall = int(get_value_proc('/proc/sys/kernel/shmall'))
-  print('current_kernel_shmall {0}'.format(current_kernel_shmall))
+  # print('current_kernel_shmall {0}'.format(current_kernel_shmall))
   
-  print('Maximum shared segment size in bytes:')
+  # print('Maximum shared segment size in bytes:')
   best_kernel_shmmax = kernel_shmall*page_size
-  print('kernel_shmmax = {0}'.format(best_kernel_shmmax))
+  # print('kernel_shmmax = {0}'.format(best_kernel_shmmax))
   current_kernel_shmmax = int(get_value_proc('/proc/sys/kernel/shmmax'))
-  print('current_kernel_shmmax {0}'.format(current_kernel_shmmax))
+  # print('current_kernel_shmmax {0}'.format(current_kernel_shmmax))
 
   if phys_pages/2 <= current_kernel_shmall:
-    print(Fore.GREEN + "[INFO]\t {0}/2 <= {1}".format(phys_pages,current_kernel_shmall))
+    print(Fore.GREEN + "[INFO]\t phys_pages/2 ({0}/2) <= current kernel.shmmax ({1})".format(phys_pages,current_kernel_shmall))
   else:
-    print(Fore.YELLOW + "[WARN]\t ")
-    add_advice("kernel_shmmax","medium","")
+    print(Fore.YELLOW + "[WARN]\t Need up to {0} to {1}/2".format(current_kernel_shmall,phys_pages))
+    add_advice("sysctl","medium","Need up to {0} to {1}/2".format(current_kernel_shmall,phys_pages))
 
   if best_kernel_shmmax <= current_kernel_shmmax:
-    print(Fore.GREEN + "[INFO]\t {0} <= {1}".format(best_kernel_shmmax,current_kernel_shmmax))
+    print(Fore.GREEN + "[INFO]\t best kernel.shmmax ({0}) <= current kernel.shmmax ({1})".format(best_kernel_shmmax,current_kernel_shmmax))
   else:
-    print(Fore.YELLOW + "[WARN]\t ")
-    add_advice("kernel_shmmax","medium","")
+    print(Fore.YELLOW + "[WARN]\t Need up to {0} to {1}".format(current_kernel_shmmax,best_kernel_shmmax))
+    add_advice("sysctl","medium","Need up to {0} to {1}".format(current_kernel_shmmax,best_kernel_shmmax))
 
 
 kernel_shmmax()
@@ -723,7 +736,7 @@ print_header_2("Indexes");
 # Invalid indexes
 invalid_indexes=select_one_column("select relname from pg_index join pg_class on indexrelid=oid where indisvalid=false")
 if len(invalid_indexes) > 0:
-  print_report_bad("There are invalid indexes in the database : @Invalid_indexes")
+  print_report_bad("There are invalid indexes in the database : {0}".format(invalid_indexes))
   add_advice("index","urgent","You have invalid indexes in the database. Please check/rebuild them")
 else:
   print_report_ok("No invalid indexes")
@@ -734,7 +747,7 @@ if min_version('9.0'):
 else:
   unused_indexes = select_one_column("select indexrelname from pg_stat_user_indexes where idx_scan=0")
 if len(unused_indexes) > 0:
-  print_report_warn("Some indexes are unused since last statistics: @Unused_indexes")
+  print_report_warn("Some indexes are unused since last statistics: {0}".format(unused_indexes))
   add_advice("index","medium","You have unused indexes in the database since last statistics. Please remove them if they are never use")
 else:
   print_report_ok("No unused indexes")
@@ -744,7 +757,7 @@ print_header_2("Procedures");
 # Procedures with default cost
 default_cost_procs = select_one_column("select n.nspname||'.'||p.proname from pg_catalog.pg_proc p left join pg_catalog.pg_namespace n on n.oid = p.pronamespace where pg_catalog.pg_function_is_visible(p.oid) and n.nspname not in ('pg_catalog','information_schema') and p.prorows<>1000 and p.procost<>10")
 if len(default_cost_procs) > 0:
-  print_report_warn("Some user procedures does not have custom cost and rows settings : @Default_cost_procs")
+  print_report_warn("Some user procedures does not have custom cost and rows settings : {0}".format(default_cost_procs))
   add_advice("proc","low","You have custom procedures with default cost and rows setting. Please reconfigure them with specific values to help the planer")
 else:
   print_report_ok("No procedures with default costs")
