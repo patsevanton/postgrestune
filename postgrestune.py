@@ -432,7 +432,41 @@ def shared_buffers():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "[INFO]\t shared_buffers: {0}".format(shared_buffers()));
+if 0.2*mem.total <= convert_to_byte(shared_buffers()) <= 0.3*max_memory:
+  print(Fore.GREEN + "[INFO]\t shared_buffers: {0}".format(shared_buffers()))
+else:
+  print(Fore.YELLOW + "[WARN]\t If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 of the memory in your system. ")
+  add_advice("shared_buffers","medium","If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 of the memory in your system.")
+
+def kernel_shmmax():
+  page_size = os.sysconf('SC_PAGE_SIZE')
+  phys_pages = os.sysconf('SC_PHYS_PAGES')
+  kernel_shmall = phys_pages/2
+  print('Maximum number of shared memory segments in pages:')
+  print('kernel_shmall = {0}'.format(kernel_shmall))
+  current_kernel_shmall = int(get_value_proc('/proc/sys/kernel/shmall'))
+  print('current_kernel_shmall {0}'.format(current_kernel_shmall))
+  
+  print('Maximum shared segment size in bytes:')
+  best_kernel_shmmax = kernel_shmall*page_size
+  print('kernel_shmmax = {0}'.format(best_kernel_shmmax))
+  current_kernel_shmmax = int(get_value_proc('/proc/sys/kernel/shmmax'))
+  print('current_kernel_shmmax {0}'.format(current_kernel_shmmax))
+
+  if phys_pages/2 <= current_kernel_shmall:
+    print(Fore.GREEN + "[INFO]\t {0}/2 <= {1}".format(phys_pages,current_kernel_shmall))
+  else:
+    print(Fore.YELLOW + "[WARN]\t ")
+    add_advice("kernel_shmmax","medium","")
+
+  if best_kernel_shmmax <= current_kernel_shmmax:
+    print(Fore.GREEN + "[INFO]\t {0} <= {1}".format(best_kernel_shmmax,current_kernel_shmmax))
+  else:
+    print(Fore.YELLOW + "[WARN]\t ")
+    add_advice("kernel_shmmax","medium","")
+
+
+kernel_shmmax()
 
 def autovacuum_max_workers():
   return int(select_one_value("show autovacuum_max_workers;")[0])
@@ -559,7 +593,7 @@ log_statement=get_setting('log_temp_files')
 if log_statement == '-1':
   print(Fore.YELLOW + "[WARN]\t log_temp_files=-1 : Disable controls logging of temporary file names and sizes.")
 else:
-  print(Fore.GREEN + "[INFO]\t log_temp_files = " + log_statement)
+  print(Fore.GREEN + "[INFO]\t log_temp_files = {0}. If you see the use of temporary files in the log, then you need to increase work_mem." + log_statement)
 
 ## Autovacuum
 print_header_2('Autovacuum');
@@ -574,7 +608,7 @@ else:
 if 0.01 <= get_setting('autovacuum_vacuum_scale_factor') <= 0.07:
   print(Fore.GREEN + "[INFO]\t 0.01 =< autovacuum_vacuum_scale_factor 0.07")
 else:
-  print(Fore.RED + "[BAD]:\t 0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01")
+  print(Fore.YELLOW + "[WARN]:\t 0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01")
   add_advice("autovacuum","medium","0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01. Need change autovacuum_vacuum_scale_factor between 0.01 - 0.07")
 
 ## Checkpoint
