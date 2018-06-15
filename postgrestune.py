@@ -554,6 +554,13 @@ elif log_statement == 'mod':
 else:
   print(Fore.GREEN + "[INFO]\t log_statement = " + log_statement)
 
+# log_temp_files
+log_statement=get_setting('log_temp_files')
+if log_statement == '-1':
+  print(Fore.YELLOW + "[WARN]\t log_temp_files=-1 : Disable controls logging of temporary file names and sizes.")
+else:
+  print(Fore.GREEN + "[INFO]\t log_temp_files = " + log_statement)
+
 ## Autovacuum
 print_header_2('Autovacuum');
 
@@ -563,6 +570,12 @@ if get_setting('autovacuum') == 'on':
   print(Fore.GREEN + "[INFO]\t autovacuum_max_workers: " + autovacuum_max_workers)
 else:
   print(Fore.RED + "[BAD]:\t autovacuum is not activated. This is bad except if you known what you do.")
+
+if 0.01 <= get_setting('autovacuum_vacuum_scale_factor') <= 0.07:
+  print(Fore.GREEN + "[INFO]\t 0.01 =< autovacuum_vacuum_scale_factor 0.07")
+else:
+  print(Fore.RED + "[BAD]:\t 0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01")
+  add_advice("autovacuum","medium","0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01. Need change autovacuum_vacuum_scale_factor between 0.01 - 0.07")
 
 ## Checkpoint
 print_header_2("Checkpoint")
