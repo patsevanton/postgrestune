@@ -233,6 +233,16 @@ def check_overcommit_memory():
 
 check_overcommit_memory()
 
+# SWAP
+def swappiness():
+  swappiness = int(get_value_proc('/proc/sys/vm/swappiness'))
+  if swappiness == 1:
+    print_report_ok("/proc/sys/vm/swappiness is good: {0}".format(swappiness))
+  else:
+    print_report_warn("/proc/sys/vm/swappiness is warn: {0}".format(swappiness))
+    add_advice("sysctl","medium","vm.swappiness is a parameter that tells the system how many percent of free memory should be left for the computer to start swapping. Try to echo vm.swappiness > /etc/sysctl.d/10swappiness.conf")
+
+swappiness()
 
 # Scheduler
 def sched_migration_cost_ns():
