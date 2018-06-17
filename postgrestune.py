@@ -213,6 +213,26 @@ except IOError as e:
   print(Fore.RED + "Error {0}".format(e))
 cur = conn.cursor()
 
+def get_pid_postgresql():
+  for proc in psutil.process_iter():
+    if sys.version_info < (2, 7):
+      if proc.name == 'postgres' or proc.name == 'postmaster':
+        if '-D' in proc.cmdline:
+          return int(proc._pid)
+    else:
+      if proc.name() == 'postgres' or proc.name() == 'postmaster':
+        if '-D' in proc.cmdline():
+          return int(proc._pid)
+
+def get_time_running_pid(pid):
+  p = psutil.Process(pid)
+  if sys.version_info < (2, 7):
+    return time.time() - p.create_time
+  else:
+    return time.time() - p.create_time()
+
+pid_postgresql = get_pid_postgresql()
+
 mem = psutil.virtual_memory()
 
 # Report
@@ -231,11 +251,12 @@ def check_overcommit_memory():
   overcommit_memory = int(get_value_proc('/proc/sys/vm/overcommit_memory'))
   if overcommit_memory != 2:
     print_report_bad("Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
-    add_advice('sysctl','urgent','set vm.overcommit_memory=2 in /etc/sysctl.conf and run sysctl -p to reload it. This will disable memory overcommitment and avoid postgresql killed by OOM killer.')
+    add_advice('sysctl','urgent','Try to echo vm.overcommit_memory=2 > /etc/sysctl.d/20-overcommit_memory.conf; sysctl -p - This will disable memory overcommitment and avoid postgresql killed by OOM killer.')
     overcommit_ratio = int(get_value_proc('/proc/sys/vm/overcommit_ratio'))
     print_report_info("sysctl vm.overcommit_ratio={0}".format(overcommit_ratio))
     if overcommit_ratio <= 50:
       print_report_bad("vm.overcommit_ratio is too small, you will not be able to use more than {0}*RAM+SWAP for applications".format(overcommit_ratio))
+      add_advice('sysctl','urgent','Try to echo vm.overcommit_ratio=90 > /etc/sysctl.d/20-overcommit_ratio.conf; sysctl -p - you will be able to use than vm.overcommit_ratio*RAM+SWAP for applications')
     elif overcommit_ratio > 90:
       print_report_bad("vm.overcommit_ratio is too high, you need to keep free space for the kernel")
   else:
@@ -254,6 +275,36 @@ def swappiness():
 
 swappiness()
 
+postgresql_current_version=select_one_value("SELECT version();")[0].split(' ')[1]
+POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_current_version)[0]
+
+def get_vmpeak_postgresql():
+  grep_vmpeak_postgresql = "grep ^VmPeak /proc/{0}/status".format(pid_postgresql)
+  process = subprocess.Popen(grep_vmpeak_postgresql.split(), stdout=subprocess.PIPE)
+  output, error = process.communicate()
+  return output
+
+def count_nr_hugepages():
+  vmpeak_postgresql = get_vmpeak_postgresql()
+  vmpeak_postgresql_int = int(re.sub(r'VmPeak:|kB', '', vmpeak_postgresql).strip())
+  page_size = os.sysconf('SC_PAGE_SIZE')
+  vm_nr_hugepages = vmpeak_postgresql_int/page_size
+  return vm_nr_hugepages
+
+# HugePages
+def hugepages():
+  nr_hugepages = get_value_proc('/proc/sys/vm/nr_hugepages')
+  if nr_hugepages:
+    if int(nr_hugepages) == 0:
+      # PostgreSQL current version => 9.4 and OS Memory > 8GB
+      if parse_version(postgresql_current_version) >= parse_version(POSTGRESQL_VERSION_MINOR_LATEST_94) and mem.total > 8589934592:
+        print_report_warn('Hugepages don`t use. The use of huge pages results in smaller page tables and less CPU time spent on memory management, increasing performance.')
+        add_advice("sysctl","medium","Try use HugePages. Advantages: Reduction of service memory operations, Huge pages are not unloaded into Swap, Overall memory usage reduction echo 'vm.nr_hugepages = {0}' >> /etc/sysctl.d/30-postgresql.conf; sysctl -p".format(count_nr_hugepages()))
+    else:
+      print("HugePages used nr_hugepages={0}".format(nr_hugepages))
+
+hugepages()
+
 # Scheduler
 def sched_migration_cost_ns():
   sched_migration_cost_ns = int(get_value_proc('/proc/sys/kernel/sched_migration_cost_ns'))
@@ -267,9 +318,6 @@ def sched_migration_cost_ns():
 sched_migration_cost_ns()
 
 print_header_1('General instance informations')
-
-postgresql_current_version=select_one_value("SELECT version();")[0].split(' ')[1]
-POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_current_version)[0]
 
 ## Version
 print_header_2('Version');
@@ -300,25 +348,6 @@ POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
 ## Uptime
 print_header_2('Uptime');
 
-def get_pid_postgresql():
-  for proc in psutil.process_iter():
-    if sys.version_info < (2, 7):
-      if proc.name == 'postgres' or proc.name == 'postmaster':
-        if '-D' in proc.cmdline:
-          return int(proc._pid)
-    else:
-      if proc.name() == 'postgres' or proc.name() == 'postmaster':
-        if '-D' in proc.cmdline():
-          return int(proc._pid)
-
-def get_time_running_pid(pid):
-  p = psutil.Process(pid)
-  if sys.version_info < (2, 7):
-    return time.time() - p.create_time
-  else:
-    return time.time() - p.create_time()
-
-pid_postgresql = get_pid_postgresql()
 timestamp_running_postgresql = get_time_running_pid(pid_postgresql)
 print_report_info("PoatgreSQL service uptime: " + time.strftime("%Hh %Mm %Ss", time.gmtime(timestamp_running_postgresql)))
 
