@@ -253,12 +253,12 @@ def check_overcommit_memory():
     print_report_bad("Memory overcommitment is allowed on the system. This can lead to OOM Killer killing some PostgreSQL process, which will cause a PostgreSQL server restart (crash recovery)")
     add_advice('sysctl','urgent','Try to echo vm.overcommit_memory=2 > /etc/sysctl.d/20-overcommit_memory.conf; sysctl -p - This will disable memory overcommitment and avoid postgresql killed by OOM killer.')
     overcommit_ratio = int(get_value_proc('/proc/sys/vm/overcommit_ratio'))
-    print_report_info("sysctl vm.overcommit_ratio={0}".format(overcommit_ratio))
+    # print_report_info("sysctl vm.overcommit_ratio={0}".format(overcommit_ratio))
     if overcommit_ratio <= 50:
-      print_report_bad("vm.overcommit_ratio is too small, you will not be able to use more than {0}*RAM+SWAP for applications".format(overcommit_ratio))
+      print_report_bad("vm.overcommit_ratio={0} is too small, you will not be able to use more than {0}*RAM+SWAP for applications".format(overcommit_ratio))
       add_advice('sysctl','urgent','Try to echo vm.overcommit_ratio=90 > /etc/sysctl.d/20-overcommit_ratio.conf; sysctl -p - you will be able to use than vm.overcommit_ratio*RAM+SWAP for applications')
     elif overcommit_ratio > 90:
-      print_report_bad("vm.overcommit_ratio is too high, you need to keep free space for the kernel")
+      print_report_bad("vm.overcommit_ratio={0} is too high, you need to keep free space for the kernel".format(overcommit_ratio))
   else:
     print_report_ok("vm.overcommit_memory is good : no memory overcommitment")
 
@@ -304,6 +304,18 @@ def hugepages():
       print("HugePages used nr_hugepages={0}".format(nr_hugepages))
 
 hugepages()
+
+# transparent_hugepage
+def transparent_hugepage():
+  transparent_hugepage = get_value_proc('/sys/kernel/mm/transparent_hugepage/enabled')
+  if transparent_hugepage:
+    if transparent_hugepage != 'never':
+        print_report_warn('Transparent HugePages can cause memory allocation delays during runtime. To avoid performance issues.')
+        add_advice("sysctl","medium","Recommends that you disable Transparent HugePages.")
+    else:
+      print("Transparent HugePages don`t use.")
+
+transparent_hugepage()
 
 # Scheduler
 def sched_migration_cost_ns():
