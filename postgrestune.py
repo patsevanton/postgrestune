@@ -105,11 +105,11 @@ def print_advices():
     print_header_2(advice_dict_name);
     for advice,priority in globals()[advice_dict_name].iteritems():
       if priority == 'urgent':
-        print(Fore.RED + priority,advice)
+        print(Fore.RED + '[{0}] {1}'.format(priority.upper(),advice))
       elif priority == 'medium':
-        print(Fore.YELLOW + priority,advice)
+        print(Fore.YELLOW + '[{0}] {1}'.format(priority.upper(),advice))
       elif priority == 'low':
-        print(Fore.MAGENTA + priority,advice)
+        print(Fore.MAGENTA + '[{0}] {1}'.format(priority.upper(),advice))
     print(Fore.RESET, end='')
   print(Fore.RESET, end='')  
 
