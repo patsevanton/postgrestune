@@ -23,6 +23,18 @@ POSTGRESQL_VERSION_MINOR_LATEST_94='9.4.18'
 POSTGRESQL_VERSION_MINOR_LATEST_93='9.3.23'
 WORK_MEM_PER_CONNECTION_PERCENT=150
 
+list_advice = ['sysctl', 'extension', 'shared_buffers', 'autovacuum', 'checkpoint', 'backup', 'tablespaces', 'index', 'procedures']
+
+sysctl_advice={}
+extension_advice={}
+shared_buffers_advice={}
+autovacuum_advice={}
+checkpoint_advice={}
+backup_advice={}
+tablespaces_advice={}
+index_advice={}
+procedures_advice={}
+
 import imp
 try:
   imp.find_module('psycopg2')
@@ -59,12 +71,9 @@ import argparse
 from pkg_resources import parse_version
 import sys
 
-advices={}
-
 def add_advice(category, priority, advice):
-  priority_advice={}
-  priority_advice[priority] = advice
-  advices[category] = priority_advice
+  advice_dict_name=str(category+'_advice')
+  globals()[advice_dict_name][advice] = priority
 
 def print_header_1(string):
   print(Fore.WHITE + '===== ' + string + ' =====', end='')
@@ -91,9 +100,10 @@ def print_report_unknown(string):
   
 def print_advices():
   print_header_1("Configuration advices");
-  for category,priority_advice in advices.iteritems():
-    print_header_2(category);
-    for priority,advice in priority_advice.iteritems():
+  for category in list_advice:
+    advice_dict_name=str(category+'_advice')
+    print_header_2(advice_dict_name);
+    for advice,priority in globals()[advice_dict_name].iteritems():
       if priority == 'urgent':
         print(Fore.RED + priority,advice)
       elif priority == 'medium':
@@ -768,7 +778,7 @@ print_header_2("Procedures");
 default_cost_procs = select_one_column("select n.nspname||'.'||p.proname from pg_catalog.pg_proc p left join pg_catalog.pg_namespace n on n.oid = p.pronamespace where pg_catalog.pg_function_is_visible(p.oid) and n.nspname not in ('pg_catalog','information_schema') and p.prorows<>1000 and p.procost<>10")
 if len(default_cost_procs) > 0:
   print_report_warn("Some user procedures does not have custom cost and rows settings : {0}".format(default_cost_procs))
-  add_advice("proc","low","You have custom procedures with default cost and rows setting. Please reconfigure them with specific values to help the planer")
+  add_advice("procedures","low","You have custom procedures with default cost and rows setting. Please reconfigure them with specific values to help the planer")
 else:
   print_report_ok("No procedures with default costs")
 
