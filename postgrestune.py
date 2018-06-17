@@ -250,7 +250,7 @@ def swappiness():
     print_report_ok("/proc/sys/vm/swappiness is good: {0}".format(swappiness))
   else:
     print_report_warn("/proc/sys/vm/swappiness is warn: {0}".format(swappiness))
-    add_advice("sysctl","medium","vm.swappiness is a parameter that tells the system how many percent of free memory should be left for the computer to start swapping. Try to echo vm.swappiness > /etc/sysctl.d/10swappiness.conf")
+    add_advice("sysctl","medium","vm.swappiness is a parameter that tells the system how many percent of free memory should be left for the computer to start swapping. Try to echo vm.swappiness=1 > /etc/sysctl.d/20-swappiness.conf; sysctl -p")
 
 swappiness()
 
@@ -262,7 +262,7 @@ def sched_migration_cost_ns():
       print_report_ok("/proc/sys/kernel/sched_migration_cost_ns is good: {0}".format(sched_migration_cost_ns))
     else:
       print_report_warn("/proc/sys/kernel/sched_migration_cost_ns is warn: {0}".format(sched_migration_cost_ns))
-      add_advice("sysctl","medium","The migration cost should be increased, almost universally on server systems with many processes. Good setting of 5ms (5000000 ns) instead default.")
+      add_advice("sysctl","medium","The migration cost should be increased, almost universally on server systems with many processes. Good setting of 5ms (5000000 ns) instead default. Try to echo kernel.sched_migration_cost_ns=5000000 > /etc/sysctl.d/20-sched_migration_cost_ns.conf; sysctl -p")
 
 sched_migration_cost_ns()
 
@@ -275,24 +275,24 @@ POSTGRESQL_VERSION_MAJOR_CURRENT = re.findall(r'(\d{1,3}\.\d{1,3})', postgresql_
 print_header_2('Version');
 def check_postgresql_version():
   if parse_version(POSTGRESQL_VERSION_MAJOR_CURRENT) < parse_version(POSTGRESQL_VERSION_MAJOR_LATEST):
-    print(Fore.YELLOW + "[WARN]\t Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
-    print(Fore.YELLOW + "[INFO]\t You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
+    print_report_warn("Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+    print_report_warn("You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if POSTGRESQL_VERSION_MAJOR_CURRENT == '9.6':
       if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_96):
-        print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print_report_warn("You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.5':
       if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_95):
-        print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print_report_warn("You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.4':
       if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_94):
-        print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print_report_warn("You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     elif POSTGRESQL_VERSION_MAJOR_CURRENT == '9.3':
       if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_93):
-        print(Fore.RED + "[WARN]\t You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+        print_report_warn("You used not latest version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
   else:
-    print(Fore.GREEN + "[OK]\t You are using last postgresql version {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
+    print_report_ok("You are using last postgresql version {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_10):
-      print(Fore.RED + "[WARN]\t You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
+      print_report_warn("You used not latest postgres version: {0}".format(POSTGRESQL_VERSION_MINOR_LATEST_10))
   return POSTGRESQL_VERSION_MAJOR_CURRENT
 
 POSTGRESQL_VERSION_MAJOR_CURRENT = check_postgresql_version()
@@ -320,10 +320,10 @@ def get_time_running_pid(pid):
 
 pid_postgresql = get_pid_postgresql()
 timestamp_running_postgresql = get_time_running_pid(pid_postgresql)
-print(Fore.GREEN + '[INFO]\t PoatgreSQL service uptime: ' + time.strftime("%Hh %Mm %Ss", time.gmtime(timestamp_running_postgresql)))
+print_report_info("PoatgreSQL service uptime: " + time.strftime("%Hh %Mm %Ss", time.gmtime(timestamp_running_postgresql)))
 
 if timestamp_running_postgresql < 24*60*60:
-    print(Fore.YELLOW + "[WARN]\t Uptime is less than 1 day. " + __file__ + " result may not be accurate")
+    print_report_warn("Uptime is less than 1 day. " + __file__ + " result may not be accurate")
 
 # ## Database count (except template)
 print_header_2('Databases');
@@ -334,8 +334,8 @@ def select_database():
   except psycopg2.Error as e:
    print(Fore.RED + "Error {0}".format(e))
   list_databases = [i[0] for i in cur.fetchall()]
-  print(Fore.GREEN + '[INFO]\t Database count (except templates): {0}'.format(len(list_databases)))
-  print(Fore.GREEN + '[INFO]\t Database list (except templates): ' + ', '.join(str(p) for p in list_databases))
+  print_report_info("Database count (except templates): {0}".format(len(list_databases)))
+  print_report_info("Database list (except templates): " + ', '.join(str(p) for p in list_databases))
   
 select_database()
 
@@ -347,8 +347,8 @@ def select_extensions():
   except psycopg2.Error as e:
    print(Fore.RED + "Error {0}".format(e))
   list_extensions = [i[0] for i in cur.fetchall()]
-  print(Fore.GREEN + '[INFO]\t Number of activated extensions : {0}'.format(len(list_extensions)))
-  print(Fore.GREEN + '[INFO]\t Activated extensions : ' + ', '.join(str(p) for p in list_extensions))
+  print_report_info('Number of activated extensions : {0}'.format(len(list_extensions)))
+  print_report_info('Activated extensions : ' + ', '.join(str(p) for p in list_extensions))
   
 select_extensions()
 
@@ -383,9 +383,9 @@ def password_encryption():
    print(Fore.RED + "Error {0}".format(e))
   config_password_encryption = cur.fetchone()[0]
   if password_encryption == 'off':
-    print(Fore.RED + '[ERROR]\t Password encryption is disable by default. Password will not be encrypted until explicitely asked')
+    print_report_bad("Password encryption is disable by default. Password will not be encrypted until explicitely asked")
   else:
-    print(Fore.GREEN + '[INFO]\t Password encryption is enabled')
+    print_report_ok('Password encryption is enabled')
 
 password_encryption()
 
@@ -394,20 +394,20 @@ print_header_2('Connection information');
 def max_connections():
   return int(select_one_value("SELECT setting FROM pg_settings WHERE name = 'max_connections';")[0])
 
-print(Fore.BLUE + "[INFO]\t max_connections: {0}".format(max_connections()))
+print_report_info('max_connections: {0}'.format(max_connections()))
 
 def current_connections():
   return int(select_one_value("SELECT count(*) FROM pg_stat_activity;")[0])
 
 current_connections_percent=current_connections()*100/max_connections()
 
-print(Fore.BLUE + "[INFO]\t current used connections: {0} ({1}%)".format(current_connections(),current_connections_percent))
+print_report_info("current used connections: {0} ({1}%)".format(current_connections(),current_connections_percent))
 
 def check_current_connections_percent():
   if current_connections_percent > 90:
-    print(Fore.RED + '[ERROR]\t You are using more that 90% or your connection. Increase max_connections before saturation of connection slots')
+    print_report_bad("You are using more that 90% or your connection. Increase max_connections before saturation of connection slots")
   elif current_connections_percent > 70:
-    print(Fore.YELLOW + '[WARN]\t You are using more than 70% or your connection. Increase max_connections before saturation of connection slots')    
+    print_report_warn('You are using more than 70% or your connection. Increase max_connections before saturation of connection slots')    
 
 check_current_connections_percent()
 
@@ -417,11 +417,11 @@ def superuser_reserved_connections():
 def superuser_reserved_connections_ratio():
   superuser_reserved_connections_ratio=superuser_reserved_connections()*100/max_connections()
   if superuser_reserved_connections() == 0:
-    print(Fore.RED + "[ERROR]\t No connection slot is reserved for superuser. In case of connection saturation you will not be able to connect to investigate or kill connections")
+    print_report_bad("No connection slot is reserved for superuser. In case of connection saturation you will not be able to connect to investigate or kill connections")
   elif superuser_reserved_connections_ratio > 20:
-    print(Fore.YELLOW + "[WARN]\t {0} of connections are reserved for super user. This is too much and can limit other users connections".format(superuser_reserved_connections_ratio))
+    print_report_warn("{0} of connections are reserved for super user. This is too much and can limit other users connections".format(superuser_reserved_connections_ratio))
   else:
-    print(Fore.GREEN + "[INFO]\t {0} are reserved for super user connection ({1})%".format(superuser_reserved_connections(),superuser_reserved_connections_ratio))
+    print_report_ok("are reserved for super user connection {0}({1})%".format(superuser_reserved_connections(),superuser_reserved_connections_ratio))
 
 superuser_reserved_connections_ratio()
 
@@ -436,11 +436,11 @@ average_connection_seconds=average_connection_age()
 
 def check_average_connection_age(seconds):
   h,m,s = convert_time(average_connection_age())
-  print(Fore.GREEN + '[INFO]\t Average connection age : {0:2.0f}h {1:2.0f}m {2:2.0f}s'.format(h,m,s))
+  print_report_info('Average connection age : {0:2.0f}h {1:2.0f}m {2:2.0f}s'.format(h,m,s))
   if seconds < 60:
-    print(Fore.RED + "[WARN]\t Average connection age is less than 1 minute. Use a connection pooler to limit new connection/seconds")
+    print_report_bad("Average connection age is less than 1 minute. Use a connection pooler to limit new connection/seconds")
   elif seconds < 600:
-    print(Fore.YELLOW + "[WARN]\t Average connection age is less than 10 minutes. Use a connection pooler to limit new connection/seconds")
+    print_report_warn("Average connection age is less than 10 minutes. Use a connection pooler to limit new connection/seconds")
 
 check_average_connection_age(average_connection_seconds)
 
@@ -454,9 +454,9 @@ def work_mem():
   return cur.fetchone()[0]
 
 work_mem_total=convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100*max_connections();
-print(Fore.GREEN + "[INFO]\t configured work_mem {0}".format(work_mem()))
-print(Fore.GREEN + "[INFO]\t Using an average ratio of work_mem buffers by connection of {0}% (require from WORK_MEM_PER_CONNECTION_PERCENT in script)".format(WORK_MEM_PER_CONNECTION_PERCENT))
-print(Fore.GREEN + "[INFO]\t total work_mem (per connection): {0}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
+print_report_info("configured work_mem {0}".format(work_mem()))
+print_report_info("Using an average ratio of work_mem buffers by connection of {0}% (require from WORK_MEM_PER_CONNECTION_PERCENT in script)".format(WORK_MEM_PER_CONNECTION_PERCENT))
+print_report_info("total work_mem (per connection): {0}".format(format_bytes(convert_to_byte(work_mem())*WORK_MEM_PER_CONNECTION_PERCENT/100)))
 
 def shared_buffers():
   try:
@@ -466,9 +466,9 @@ def shared_buffers():
   return cur.fetchone()[0]
 
 if 0.2*mem.total <= convert_to_byte(shared_buffers()) <= 0.3*max_memory:
-  print(Fore.GREEN + "[INFO]\t shared_buffers: {0}".format(shared_buffers()))
+  print_report_info("shared_buffers: {0}".format(shared_buffers()))
 else:
-  print(Fore.YELLOW + "[WARN]\t If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 of the memory in your system. ")
+  print_report_warn("If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 of the memory in your system. ")
   add_advice("shared_buffers","medium","If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 of the memory in your system.")
 
 def kernel_shmmax():
@@ -487,15 +487,15 @@ def kernel_shmmax():
   # print('current_kernel_shmmax {0}'.format(current_kernel_shmmax))
 
   if phys_pages/2 <= current_kernel_shmall:
-    print(Fore.GREEN + "[INFO]\t phys_pages/2 ({0}/2) <= current kernel.shmmax ({1})".format(phys_pages,current_kernel_shmall))
+    print_report_ok("phys_pages/2 ({0}/2) <= current kernel.shmmax ({1})".format(phys_pages,current_kernel_shmall))
   else:
-    print(Fore.YELLOW + "[WARN]\t Need up to {0} to {1}/2".format(current_kernel_shmall,phys_pages))
+    print_report_warn("Need up to {0} to {1}/2".format(current_kernel_shmall,phys_pages))
     add_advice("sysctl","medium","Need up to {0} to {1}/2".format(current_kernel_shmall,phys_pages))
 
   if best_kernel_shmmax <= current_kernel_shmmax:
-    print(Fore.GREEN + "[INFO]\t best kernel.shmmax ({0}) <= current kernel.shmmax ({1})".format(best_kernel_shmmax,current_kernel_shmmax))
+    print_report_info("best kernel.shmmax ({0}) <= current kernel.shmmax ({1})".format(best_kernel_shmmax,current_kernel_shmmax))
   else:
-    print(Fore.YELLOW + "[WARN]\t Need up to {0} to {1}".format(current_kernel_shmmax,best_kernel_shmmax))
+    print_report_warn("Need up to {0} to {1}".format(current_kernel_shmmax,best_kernel_shmmax))
     add_advice("sysctl","medium","Need up to {0} to {1}".format(current_kernel_shmmax,best_kernel_shmmax))
 
 
@@ -512,7 +512,7 @@ max_processes = max_connections() + autovacuum_max_workers()
 if POSTGRESQL_VERSION_MAJOR_CURRENT >= '9.4':
   max_processes = max_processes + max_worker_processes()
 
-print(Fore.GREEN + "[INFO]\t Track activity reserved size : " + str(max_processes))
+print_report_info("Track activity reserved size : " + str(max_processes))
 
 def track_activity_query_size():
   return int(select_one_value("show track_activity_query_size;")[0])
@@ -529,9 +529,9 @@ def maintenance_work_mem():
 maintenance_work_mem_total = convert_to_byte(maintenance_work_mem()) * autovacuum_max_workers()
 
 if convert_to_byte(maintenance_work_mem()) <= 64*1024*1024:
-  print(Fore.YELLOW + "[WARN]\t maintenance_work_mem {0} is less or equal default value. Increase it to reduce maintenance tasks time".format(maintenance_work_mem()))
+  print_report_warn("maintenance_work_mem {0} is less or equal default value. Increase it to reduce maintenance tasks time".format(maintenance_work_mem()))
 else:
-  print(Fore.GREEN + "[INFO]\t maintenance_work_mem = {0}".format(maintenance_work_mem()))
+  print_report_info("maintenance_work_mem = {0}".format(maintenance_work_mem()))
 
 max_memory=convert_to_byte(shared_buffers())+work_mem_total+maintenance_work_mem_total+track_activity_size
 
@@ -555,7 +555,7 @@ def effective_cache_size():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "[INFO]\t effective_cache_size: {0}".format(effective_cache_size()));
+print_report_info("effective_cache_size: {0}".format(effective_cache_size()));
 
 def all_databases_size():
   try:
@@ -564,23 +564,23 @@ def all_databases_size():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-print(Fore.GREEN + "[INFO]\t Size of all databases : {0}".format(format_bytes(int(all_databases_size()))))
+print_report_info("Size of all databases : {0}".format(format_bytes(int(all_databases_size()))))
 
 shared_buffers_usage = int(all_databases_size())/convert_to_byte(shared_buffers())
 if shared_buffers_usage < 0.7:
-  print(Fore.YELLOW + "[WARN]\t shared_buffer is too big for the total databases size, memory is lost")
+  print_report_warn("shared_buffer is too big for the total databases size, memory is lost")
 
 percent_postgresql_max_memory = max_memory*100./mem.total
-print(Fore.BLUE + "[INFO]\t PostgreSQL maximum memory usage: {0:.2f}%".format(percent_postgresql_max_memory) + " of system RAM")
+print_report_info("PostgreSQL maximum memory usage: {0:.2f}%".format(percent_postgresql_max_memory) + " of system RAM")
 
 if percent_postgresql_max_memory > 100:
-  print(Fore.RED + "BAD: Max possible memory usage for PostgreSQL is more than system total RAM. Add more RAM or reduce PostgreSQL memory")
+  print_report_bad("Max possible memory usage for PostgreSQL is more than system total RAM. Add more RAM or reduce PostgreSQL memory")
 elif percent_postgresql_max_memory > 80:
-  print(Fore.YELLOW + "[WARN]\t Max possible memory usage for PostgreSQL is more than 90% of system total RAM.")
+  print_report_warn("Max possible memory usage for PostgreSQL is more than 90% of system total RAM.")
 elif percent_postgresql_max_memory < 60:
-  print(Fore.YELLOW + "[WARN]\t Max possible memory usage for PostgreSQL is less than 60% of system total RAM. On a dedicated host you can increase PostgreSQL buffers to optimize performances.")
+  print_report_warn("Max possible memory usage for PostgreSQL is less than 60% of system total RAM. On a dedicated host you can increase PostgreSQL buffers to optimize performances.")
 else:
-  print(Fore.GREEN + "[INFO]\t Max possible memory usage for PostgreSQL is good")
+  print_report_info("Max possible memory usage for PostgreSQL is good")
 
 track_activity_ratio = track_activity_size*100/mem.total
 if track_activity_ratio > 1:
@@ -606,42 +606,42 @@ def log_min_duration_statement():
 print_header_2('Logs');
 
 if log_min_duration_statement() == '-1':
-  print(Fore.YELLOW + "[WARN]\t log of long queries is desactivated. It will be more difficult to optimize query performances")
+  print_report_warn("log of long queries is desactivated. It will be more difficult to optimize query performances")
 elif log_min_duration_statement < 1000:
-  print(Fore.RED + "[BAD]\t log_min_duration_statement=" + log_min_duration_statement() + ": all requests of more than 1 sec will be written in log. It can be disk intensive (I/O and space)")
+  print_report_bad("log_min_duration_statement=" + log_min_duration_statement() + ": all requests of more than 1 sec will be written in log. It can be disk intensive (I/O and space)")
 else:
-  print(Fore.GREEN + "[INFO]\t long queries will be logged")
+  print_report_info("long queries will be logged")
 
 # log_statement
 log_statement=get_setting('log_statement')
 if log_statement == 'all':
-  print(Fore.RED + "[BAD]\t log_statement=all : this is very disk intensive and only usefull for debug")
+  print_report_bad("log_statement=all : this is very disk intensive and only usefull for debug")
 elif log_statement == 'mod':
-  print(Fore.YELLOW + "[WARN]\t log_statement=mod : this is disk intensive")
+  print_report_warn("log_statement=mod : this is disk intensive")
 else:
-  print(Fore.GREEN + "[INFO]\t log_statement = " + log_statement)
+  print_report_info("log_statement = " + log_statement)
 
 # log_temp_files
 log_statement=get_setting('log_temp_files')
 if log_statement == '-1':
-  print(Fore.YELLOW + "[WARN]\t log_temp_files=-1 : Disable controls logging of temporary file names and sizes.")
+  print_report_warn("log_temp_files=-1 : Disable controls logging of temporary file names and sizes.")
 else:
-  print(Fore.GREEN + "[INFO]\t log_temp_files = {0}. If you see the use of temporary files in the log, then you need to increase work_mem." + log_statement)
+  print_report_info("log_temp_files = {0}. If you see the use of temporary files in the log, then you need to increase work_mem." + log_statement)
 
 ## Autovacuum
 print_header_2('Autovacuum');
 
 if get_setting('autovacuum') == 'on':
-  print(Fore.GREEN + "[INFO]\t autovacuum is activated")
+  print_report_info("autovacuum is activated")
   autovacuum_max_workers = get_setting('autovacuum_max_workers')
-  print(Fore.GREEN + "[INFO]\t autovacuum_max_workers: " + autovacuum_max_workers)
+  print_report_info("autovacuum_max_workers: " + autovacuum_max_workers)
 else:
-  print(Fore.RED + "[BAD]:\t autovacuum is not activated. This is bad except if you known what you do.")
+  print_report_bad("autovacuum is not activated. This is bad except if you known what you do.")
 
 if 0.01 <= get_setting('autovacuum_vacuum_scale_factor') <= 0.07:
-  print(Fore.GREEN + "[INFO]\t 0.01 =< autovacuum_vacuum_scale_factor 0.07")
+  print_report_info("0.01 =< autovacuum_vacuum_scale_factor 0.07")
 else:
-  print(Fore.YELLOW + "[WARN]:\t 0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01")
+  print_report_warn("0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01")
   add_advice("autovacuum","medium","0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01. Need change autovacuum_vacuum_scale_factor between 0.01 - 0.07")
 
 ## Checkpoint
