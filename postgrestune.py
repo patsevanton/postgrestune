@@ -498,7 +498,7 @@ if 0.2*mem.total <= convert_to_byte(shared_buffers()) <= 0.3*max_memory:
   print_report_info("shared_buffers: {0}".format(shared_buffers()))
 else:
   print_report_warn("If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 of the memory in your system. ")
-  add_advice("shared_buffers","medium","If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 of the memory in your system.")
+  add_advice("shared_buffers","medium","If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 at postgresql.conf of the memory in your system.")
 
 def kernel_shmmax():
   page_size = os.sysconf('SC_PAGE_SIZE')
@@ -671,22 +671,22 @@ if 0.01 <= get_setting('autovacuum_vacuum_scale_factor') <= 0.07:
   print_report_info("0.01 =< autovacuum_vacuum_scale_factor 0.07")
 else:
   print_report_warn("0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01")
-  add_advice("autovacuum","medium","0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01. Need change autovacuum_vacuum_scale_factor between 0.01 - 0.07")
+  add_advice("autovacuum","medium","0.07 <= autovacuum_vacuum_scale_factor or autovacuum_vacuum_scale_factor <= 0.01. Need change autovacuum_vacuum_scale_factor between 0.01 - 0.07 at postgresql.conf")
 
 ## Checkpoint
 print_header_2("Checkpoint")
 checkpoint_completion_target=float(get_setting('checkpoint_completion_target'))
 if checkpoint_completion_target < 0.5:
   print_report_bad("checkpoint_completion_target ({0}) is lower than default (0.5)".format(checkpoint_completion_target))
-  add_advice("checkpoint","urgent","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
+  add_advice("checkpoint","urgent","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval at postgresql.conf")
 elif checkpoint_completion_target >= 0.5 and checkpoint_completion_target <= 0.7:
   print_report_warn("checkpoint_completion_target ({0}) is low".format(checkpoint_completion_target))
-  add_advice("checkpoint","medium","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
+  add_advice("checkpoint","medium","Your checkpoint completion target is too low. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval at postgresql.conf")
 elif checkpoint_completion_target >= 0.7 and checkpoint_completion_target <= 0.9:
   print_report_ok("checkpoint_completion_target ({0}) OK".format(checkpoint_completion_target))
 elif checkpoint_completion_target > 0.9 and checkpoint_completion_target < 1:
   print_report_warn("checkpoint_completion_target ({0}) is too near to 1".format(checkpoint_completion_target))
-  add_advice("checkpoint","medium","Your checkpoint completion target is too high. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval")
+  add_advice("checkpoint","medium","Your checkpoint completion target is too high. Put something nearest from 0.8/0.9 to balance your writes better during the checkpoint interval at postgresql.conf")
 else:
   print_report_bad("checkpoint_completion_target too high ({0})".format(checkpoint_completion_target))
 
