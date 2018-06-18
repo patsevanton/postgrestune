@@ -335,7 +335,7 @@ print_header_1('General instance informations')
 print_header_2('Version');
 def check_postgresql_version():
   if parse_version(POSTGRESQL_VERSION_MAJOR_CURRENT) < parse_version(POSTGRESQL_VERSION_MAJOR_LATEST):
-    print_report_warn("Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
+    print_report_info("Latest major version postgres is: {0}".format(POSTGRESQL_VERSION_MAJOR_LATEST))
     print_report_warn("You used not latest major version postgres: {0}".format(POSTGRESQL_VERSION_MAJOR_CURRENT))
     if POSTGRESQL_VERSION_MAJOR_CURRENT == '9.6':
       if parse_version(postgresql_current_version) < parse_version(POSTGRESQL_VERSION_MINOR_LATEST_96):
@@ -534,7 +534,7 @@ def kernel_shmmax():
     add_advice("sysctl","medium","Need up to {0} to {1}/2".format(current_kernel_shmall,phys_pages))
 
   if best_kernel_shmmax <= current_kernel_shmmax:
-    print_report_info("best kernel.shmmax ({0}) <= current kernel.shmmax ({1})".format(best_kernel_shmmax,current_kernel_shmmax))
+    print_report_ok("best kernel.shmmax ({0}) <= current kernel.shmmax ({1})".format(best_kernel_shmmax,current_kernel_shmmax))
   else:
     print_report_warn("Need up to {0} to {1}".format(current_kernel_shmmax,best_kernel_shmmax))
     add_advice("sysctl","medium","Need up to {0} to {1}".format(current_kernel_shmmax,best_kernel_shmmax))
