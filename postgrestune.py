@@ -319,9 +319,9 @@ transparent_hugepage()
 
 # Scheduler
 def sched_migration_cost_ns():
-  sched_migration_cost_ns = int(get_value_proc('/proc/sys/kernel/sched_migration_cost_ns'))
+  sched_migration_cost_ns = get_value_proc('/proc/sys/kernel/sched_migration_cost_ns')
   if sched_migration_cost_ns:
-    if 4000000 <= sched_migration_cost_ns <= 6000000:
+    if 4000000 <= int(sched_migration_cost_ns) <= 6000000:
       print_report_ok("/proc/sys/kernel/sched_migration_cost_ns is good: {0}".format(sched_migration_cost_ns))
     else:
       print_report_warn("/proc/sys/kernel/sched_migration_cost_ns is warn: {0}".format(sched_migration_cost_ns))
@@ -506,7 +506,7 @@ def shared_buffers():
    print(Fore.RED + "Error {0}".format(e))
   return cur.fetchone()[0]
 
-if 0.2*mem.total <= convert_to_byte(shared_buffers()) <= 0.3*max_memory:
+if 0.2*mem.total <= convert_to_byte(shared_buffers()) <= 0.3*mem.total:
   print_report_info("shared_buffers: {0}".format(shared_buffers()))
 else:
   print_report_warn("If you have a system with 1GB or more of RAM, a reasonable starting value for shared_buffers is 1/4 of the memory in your system. ")
